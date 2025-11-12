@@ -13,8 +13,38 @@ import {
 import { Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Sparkles } from "lucide-react-native";
-import { generateText } from "@rork-ai/toolkit-sdk";
 import Colors from "@/constants/colors";
+
+// Função mock para gerar receitas (substituir por IA real futuramente)
+const generateMockRecipe = (ingredients: string, preferences: string): string => {
+  return `🍳 **Receita Sem Lactose Personalizada**
+
+📋 **Ingredientes:**
+${ingredients.split(',').map(i => `• ${i.trim()}`).join('\n')}
+${preferences ? `\n**Preferências:** ${preferences}` : ''}
+
+⏱️ **Tempo de Preparo:** 30 minutos
+👥 **Porções:** 4 pessoas
+
+**Modo de Preparo:**
+
+1. Prepare todos os ingredientes, lavando e cortando conforme necessário.
+
+2. Em uma panela média, aqueça um fio de azeite e refogue os ingredientes aromáticos.
+
+3. Adicione os ingredientes principais e tempere a gosto.
+
+4. Cozinhe em fogo médio por aproximadamente 20 minutos, mexendo ocasionalmente.
+
+5. Finalize com ervas frescas e sirva quente.
+
+💡 **Dicas:**
+• Todos os ingredientes são naturalmente sem lactose
+• Você pode adicionar leite vegetal (amêndoas, aveia, coco) para cremosidade
+• Substitua manteiga por azeite ou óleo de coco
+
+✨ Esta é uma receita simulada. Em breve teremos geração com IA real!`;
+};
 
 export default function RecipeGeneratorScreen() {
   const insets = useSafeAreaInsets();
@@ -31,16 +61,12 @@ export default function RecipeGeneratorScreen() {
 
     try {
       setIsGenerating(true);
-      const response = await generateText({
-        messages: [
-          {
-            role: "user",
-            content: `Crie uma receita sem lactose usando os seguintes ingredientes: ${ingredients}.\n\n${preferences ? `Preferências adicionais: ${preferences}` : ""}\n\nForneça uma receita completa com:\n- Nome da receita\n- Tempo de preparo\n- Ingredientes detalhados\n- Modo de preparo passo a passo\n- Dicas extras\n\nFormate de forma clara e organizada.`,
-          },
-        ],
-      });
-
-      setGeneratedRecipe(response);
+      
+      // Simula delay de processamento
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const recipe = generateMockRecipe(ingredients, preferences);
+      setGeneratedRecipe(recipe);
     } catch (error) {
       console.error("Erro ao gerar receita:", error);
       alert("Erro ao gerar receita. Tente novamente.");
