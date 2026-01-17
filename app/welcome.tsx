@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Image,
   ScrollView,
   Dimensions,
+  Animated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,43 +15,46 @@ import { ArrowRight } from "lucide-react-native";
 import { router } from "expo-router";
 import Colors from "@/constants/colors";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
-const videoSources = [
+const imageSources = [
   {
-    id: '1',
-    video: require('@/assets/Video Scan-app.gif'),
+    id: "1",
+    image: require("@/assets/img-10.png"),
   },
   {
-    id: '2',
-    video: require('@/assets/Video G.receitas.gif'),
-  },
-  {
-    id: '3',
-    video: require('@/assets/Video Nutri app.gif'),
-  },
-  {
-    id: '4',
-    video: require('@/assets/Video receitas app.gif'),
+    id: "2",
+    image: require("@/assets/img-20.png"),
   },
 ];
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const [activeIndex, setActiveIndex] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const handleStartQuiz = () => {
-    router.replace("/quiz-lactose");
+    router.replace("/quiz");
   };
 
-  // Auto-slide a cada 4 segundos (tempo para o GIF completar)
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveIndex((prevIndex) => (prevIndex + 1) % videoSources.length);
-    }, 4000);
-    
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setActiveIndex((prevIndex) => (prevIndex + 1) % imageSources.length);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 3000);
+
     return () => clearInterval(interval);
-  }, []);
+  }, [fadeAnim]);
 
   return (
     <View style={styles.container}>
@@ -58,7 +62,6 @@ export default function WelcomeScreen() {
         colors={[Colors.primary, Colors.primaryDark]}
         style={styles.gradient}
       >
-        {/* Indicador de Idioma */}
         <View style={[styles.languageIndicator, { top: insets.top + 16 }]}>
           <Text style={styles.languageText}>PT</Text>
           <Text style={styles.flagEmoji}>🇧🇷</Text>
@@ -72,11 +75,10 @@ export default function WelcomeScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.content}>
-            {/* Vídeo em Rotação */}
             <View style={styles.videoContainer}>
-              <Image 
-                source={videoSources[activeIndex].video}
-                style={styles.videoImage}
+              <Animated.Image
+                source={imageSources[activeIndex].image}
+                style={[styles.videoImage, { opacity: fadeAnim }]}
                 resizeMode="contain"
               />
             </View>
@@ -110,12 +112,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   languageIndicator: {
-    position: 'absolute',
+    position: "absolute",
     right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 20,
@@ -123,7 +125,7 @@ const styles = StyleSheet.create({
   },
   languageText: {
     fontSize: 12,
-    fontWeight: '600' as const,
+    fontWeight: "600" as const,
     color: Colors.white,
   },
   flagEmoji: {
@@ -138,17 +140,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   videoContainer: {
-    width: '100%',
+    width: "100%",
     marginBottom: 40,
     marginTop: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   videoImage: {
     width: width - 48,
     height: 450,
     borderRadius: 24,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   ctaContainer: {
     width: "100%",
@@ -186,4 +188,3 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
 });
-

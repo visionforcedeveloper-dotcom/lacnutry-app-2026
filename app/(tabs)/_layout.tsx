@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, BookOpen, ScanLine, Sparkles, User } from "lucide-react-native";
+import { Home, AlertCircle, ScanLine, Crown, User } from "lucide-react-native";
 import React from "react";
 
 import Colors from "@/constants/colors";
@@ -33,8 +33,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="receitas"
         options={{
-          title: "Receitas",
-          tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} />,
+          title: "Alertas",
+          tabBarIcon: ({ color, size }) => <AlertCircle color={color} size={size} />,
         }}
       />
       <Tabs.Screen
@@ -47,8 +47,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="ferramentas"
         options={{
-          title: "Assistentes IA",
-          tabBarIcon: ({ color, size }) => <Sparkles color={color} size={size} />,
+          title: "Mais",
+          tabBarIcon: ({ color, size }) => <Crown color={color} size={size} />,
         }}
       />
       <Tabs.Screen

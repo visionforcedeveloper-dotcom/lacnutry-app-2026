@@ -23,4 +23,6 @@ export default {
   warning: "#F39C12",
   error: "#E74C3C",
   errorLight: "#FDEAEA",
+  secondary: "#FF6B6B",
+  disabled: "#BDC3C7",
 };

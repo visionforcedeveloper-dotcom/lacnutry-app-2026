@@ -1,6 +1,7 @@
 import createContextHook from '@nkzw/create-context-hook';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Storage } from '@/lib/asyncStorage';
+import type { GeminiVisionResponse } from '@/lib/gemini';
 
 export interface UserProfile {
   name: string;
@@ -8,6 +9,22 @@ export interface UserProfile {
   phone?: string;
   allergies: string[];
   preferences: string[];
+  intoleranceProfile?: {
+    level: 'leve' | 'moderada' | 'severa';
+    lactaseUse: 'sempre' | 'as-vezes' | 'nunca';
+    problematicFoods: string[];
+    symptomFrequency: string;
+  };
+}
+
+export interface ReactionReport {
+  id: string;
+  product: string;
+  timeToSymptoms: number; // em minutos
+  symptoms: string[];
+  intensity: 1 | 2 | 3 | 4 | 5;
+  date: string;
+  notes?: string;
 }
 
 export interface ScanHistory {
@@ -16,6 +33,8 @@ export interface ScanHistory {
   date: string;
   hasLactose: boolean;
   imageUri?: string;
+  analysis?: GeminiVisionResponse;
+  additionalInfo?: string;
 }
 
 export interface StatsData {
@@ -24,23 +43,24 @@ export interface StatsData {
   lastAccessDate: string;
 }
 
+const STORAGE_KEYS = {
+  PROFILE: '@lacnutry_profile',
+  FAVORITES: '@lacnutry_favorites',
+  HISTORY: '@lacnutry_history',
+  FIRST_ACCESS: '@lacnutry_first_access',
+  STATS: '@lacnutry_stats',
+  REACTIONS: '@lacnutry_reactions',
+  QUIZ_COMPLETED: '@lacnutry_quiz_completed',
+  QUIZ_PROGRESS: '@lacnutry_quiz_progress',
+  SUBSCRIPTION: '@lacnutry_subscription',
+};
+
 export interface QuizProgress {
   currentQuestion: number;
   answers: Record<string, number>;
   userName?: string;
   userEmail?: string;
 }
-
-const STORAGE_KEYS = {
-  PROFILE: '@lacnutry_profile',
-  FAVORITES: '@lacnutry_favorites',
-  HISTORY: '@lacnutry_history',
-  FIRST_ACCESS: '@lacnutry_first_access',
-  QUIZ_COMPLETED: '@lacnutry_quiz_completed',
-  QUIZ_PROGRESS: '@lacnutry_quiz_progress',
-  SUBSCRIPTION: '@lacnutry_subscription',
-  STATS: '@lacnutry_stats',
-};
 
 const DEFAULT_PROFILE: UserProfile = {
   name: 'Usuário',
@@ -53,11 +73,13 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [history, setHistory] = useState<ScanHistory[]>([]);
+  const [reactions, setReactions] = useState<ReactionReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFirstAccess, setIsFirstAccess] = useState(true);
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState(false);
   const [hasSubscription, setHasSubscription] = useState(false);
   const [quizProgress, setQuizProgress] = useState<QuizProgress | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
   const [stats, setStats] = useState<StatsData>({
     totalScans: 0,
     streakDays: 0,
@@ -66,10 +88,21 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
 
   const loadData = useCallback(async () => {
     try {
-      const [profileData, favoritesData, historyData, firstAccessData, quizData, quizProgressData, subscriptionData, statsData] = await Promise.all([
+      const [
+        profileData,
+        favoritesData,
+        historyData,
+        reactionsData,
+        firstAccessData,
+        quizCompletedData,
+        quizProgressData,
+        subscriptionData,
+        statsData,
+      ] = await Promise.all([
         Storage.getItem(STORAGE_KEYS.PROFILE),
         Storage.getItem(STORAGE_KEYS.FAVORITES),
         Storage.getItem(STORAGE_KEYS.HISTORY),
+        Storage.getItem(STORAGE_KEYS.REACTIONS),
         Storage.getItem(STORAGE_KEYS.FIRST_ACCESS),
         Storage.getItem(STORAGE_KEYS.QUIZ_COMPLETED),
         Storage.getItem(STORAGE_KEYS.QUIZ_PROGRESS),
@@ -86,14 +119,17 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
       if (historyData) {
         setHistory(JSON.parse(historyData));
       }
-      
-      setIsFirstAccess(firstAccessData === null);
-      setHasCompletedQuiz(quizData === 'true');
-      setHasSubscription(subscriptionData === 'true');
-      
+      if (reactionsData) {
+        setReactions(JSON.parse(reactionsData));
+      }
       if (quizProgressData) {
         setQuizProgress(JSON.parse(quizProgressData));
       }
+
+      setIsFirstAccess(firstAccessData === null);
+      setHasCompletedQuiz(quizCompletedData === 'true');
+      setHasSubscription(subscriptionData === 'true');
+      setIsPremium(subscriptionData === 'true');
       
       if (statsData) {
         const parsedStats = JSON.parse(statsData);
@@ -201,6 +237,58 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
 
   const isFavorite = useCallback((recipeId: string) => favorites.includes(recipeId), [favorites]);
 
+  const addReaction = useCallback(async (reaction: Omit<ReactionReport, 'id' | 'date'>) => {
+    const newReaction: ReactionReport = {
+      ...reaction,
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+    };
+    
+    setReactions((currentReactions) => {
+      const newReactions = [newReaction, ...currentReactions];
+      Storage.setItem(STORAGE_KEYS.REACTIONS, JSON.stringify(newReactions)).catch((error) => {
+        console.error('Error adding reaction:', error);
+      });
+      return newReactions;
+    });
+  }, []);
+
+  const getReactionPatterns = useCallback(() => {
+    if (reactions.length === 0) return null;
+
+    // Analisar produtos mais problemáticos
+    const productFrequency: Record<string, number> = {};
+    const symptomFrequency: Record<string, number> = {};
+    
+    reactions.forEach(reaction => {
+      productFrequency[reaction.product] = (productFrequency[reaction.product] || 0) + 1;
+      reaction.symptoms.forEach(symptom => {
+        symptomFrequency[symptom] = (symptomFrequency[symptom] || 0) + 1;
+      });
+    });
+
+    const mostProblematicProducts = Object.entries(productFrequency)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([product, count]) => ({ product, count }));
+
+    const commonSymptoms = Object.entries(symptomFrequency)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([symptom, count]) => ({ symptom, count }));
+
+    const avgIntensity = reactions.reduce((sum, r) => sum + r.intensity, 0) / reactions.length;
+    const avgTimeToSymptoms = reactions.reduce((sum, r) => sum + r.timeToSymptoms, 0) / reactions.length;
+
+    return {
+      mostProblematicProducts,
+      commonSymptoms,
+      avgIntensity,
+      avgTimeToSymptoms,
+      totalReactions: reactions.length,
+    };
+  }, [reactions]);
+
   const saveQuizProgress = useCallback(async (progress: QuizProgress) => {
     try {
       await Storage.setItem(STORAGE_KEYS.QUIZ_PROGRESS, JSON.stringify(progress));
@@ -226,46 +314,46 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
       await Promise.all([
         Storage.setItem(STORAGE_KEYS.FIRST_ACCESS, 'false'),
         Storage.setItem(STORAGE_KEYS.QUIZ_COMPLETED, 'true'),
-        Storage.removeItem(STORAGE_KEYS.QUIZ_PROGRESS), // Limpar progresso ao completar
+        Storage.removeItem(STORAGE_KEYS.QUIZ_PROGRESS),
       ]);
-      
+
       const updatedProfile = { ...profile, name, email };
       await updateProfile(updatedProfile);
-      
+
       setIsFirstAccess(false);
       setHasCompletedQuiz(true);
       setQuizProgress(null);
-      
+
       console.log('[Profile] Quiz completado e perfil atualizado');
     } catch (error) {
       console.error('[Profile] Erro ao completar quiz:', error);
     }
   }, [profile, updateProfile]);
 
-  const completeSubscription = useCallback(async () => {
+  const setPremiumStatus = useCallback(async (status: boolean) => {
     try {
-      await Storage.setItem(STORAGE_KEYS.SUBSCRIPTION, 'true');
-      setHasSubscription(true);
-      console.log('[Profile] Assinatura ativada');
+      await Storage.setItem(STORAGE_KEYS.SUBSCRIPTION, status ? 'true' : 'false');
+      setHasSubscription(status);
+      setIsPremium(status);
+      console.log('[Profile] Status premium atualizado:', status);
     } catch (error) {
-      console.error('[Profile] Erro ao ativar assinatura:', error);
+      console.error('Error saving premium status:', error);
     }
   }, []);
 
+  const completeSubscription = useCallback(async () => {
+    await setPremiumStatus(true);
+  }, [setPremiumStatus]);
+
   const cancelSubscription = useCallback(async () => {
-    try {
-      await Storage.setItem(STORAGE_KEYS.SUBSCRIPTION, 'false');
-      setHasSubscription(false);
-      console.log('[Profile] Assinatura cancelada/expirada');
-    } catch (error) {
-      console.error('[Profile] Erro ao cancelar assinatura:', error);
-    }
-  }, []);
+    await setPremiumStatus(false);
+  }, [setPremiumStatus]);
 
   return useMemo(() => ({
     profile,
     favorites,
     history,
+    reactions,
     isLoading,
     isFirstAccess,
     hasCompletedQuiz,
@@ -277,10 +365,39 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
     addToHistory,
     clearHistory,
     isFavorite,
+    addReaction,
+    getReactionPatterns,
     saveQuizProgress,
     clearQuizProgress,
     completeQuiz,
+    isPremium,
+    setPremiumStatus,
     completeSubscription,
     cancelSubscription,
-  }), [profile, favorites, history, isLoading, isFirstAccess, hasCompletedQuiz, hasSubscription, quizProgress, stats, updateProfile, toggleFavorite, addToHistory, clearHistory, isFavorite, saveQuizProgress, clearQuizProgress, completeQuiz, completeSubscription, cancelSubscription]);
+  }), [
+    profile,
+    favorites,
+    history,
+    reactions,
+    isLoading,
+    isFirstAccess,
+    hasCompletedQuiz,
+    hasSubscription,
+    quizProgress,
+    stats,
+    updateProfile,
+    toggleFavorite,
+    addToHistory,
+    clearHistory,
+    isFavorite,
+    addReaction,
+    getReactionPatterns,
+    saveQuizProgress,
+    clearQuizProgress,
+    completeQuiz,
+    isPremium,
+    setPremiumStatus,
+    completeSubscription,
+    cancelSubscription,
+  ]);
 });

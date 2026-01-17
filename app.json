@@ -2,7 +2,7 @@
   "expo": {
     "name": "LacNutry",
     "slug": "lacnutry-app",
-    "version": "3.10.0",
+    "version": "3.44.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "rork-app",
@@ -23,7 +23,7 @@
       }
     },
     "android": {
-      "versionCode": 43,
+      "versionCode": 76,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -81,9 +81,10 @@
         "origin": "https://rork.com/"
       },
       "eas": {
-        "projectId": "d66982fc-28b0-490e-a41d-2c5e66441d36"
+        "projectId": "feeb5134-7a2c-46ad-91f1-a3674f14d16e"
       }
     },
-    "owner": "visionforce1"
+    "owner": "visionforce4"
+    
   }
 }

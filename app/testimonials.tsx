@@ -7,9 +7,8 @@ import {
   ScrollView,
   Image,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Star, Users, TrendingUp, Heart, ChevronLeft } from "lucide-react-native";
+import { Star, TrendingUp, Heart, ChevronLeft } from "lucide-react-native";
 import { router } from "expo-router";
 import Colors from "@/constants/colors";
 
@@ -26,7 +25,7 @@ const testimonials: Testimonial[] = [
   {
     id: 1,
     name: "Ana Silva",
-    avatar: require('@/assets/images/D1.png'),
+    avatar: require("@/assets/images/D1.png"),
     rating: 5,
     text: "Depois que baixei o LacNutry parei de sofrer tentando descobrir se o alimento tinha lactose. O scanner ajuda MUITO no mercado. Ficou muito mais fácil viver sem passar mal.",
     achievement: "Usa o scanner diariamente",
@@ -34,7 +33,7 @@ const testimonials: Testimonial[] = [
   {
     id: 2,
     name: "Juliana Costa",
-    avatar: require('@/assets/images/D2.png'),
+    avatar: require("@/assets/images/D2.png"),
     rating: 5,
     text: "O app me salvou no dia a dia! As receitas sem lactose são práticas e baratinhas. Hoje tenho muito mais variedade na dieta.",
     achievement: "100+ receitas testadas",
@@ -42,7 +41,7 @@ const testimonials: Testimonial[] = [
   {
     id: 3,
     name: "Carlos Mendes",
-    avatar: require('@/assets/images/D3.png'),
+    avatar: require("@/assets/images/D3.png"),
     rating: 5,
     text: "Sempre ficava com medo de comer algo errado fora de casa. Com o LacNutry, só aponto a câmera e já sei se posso consumir. Me trouxe segurança.",
     achievement: "Sem crises há 3 meses",
@@ -50,7 +49,7 @@ const testimonials: Testimonial[] = [
   {
     id: 4,
     name: "Rafael Santos",
-    avatar: require('@/assets/images/D4.png'),
+    avatar: require("@/assets/images/D4.png"),
     rating: 5,
     text: "Finalmente um app que entende quem é intolerante! O LacNutry me ajudou a controlar minhas crises porque agora sei exatamente o que posso ou não consumir. Uso todos os dias.",
     achievement: "Vida transformada",
@@ -59,7 +58,7 @@ const testimonials: Testimonial[] = [
 
 export default function TestimonialsScreen() {
   const insets = useSafeAreaInsets();
-  const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const [currentTestimonial] = useState(0);
 
   const handleContinue = () => {
     router.replace("/paywall");
@@ -87,15 +86,12 @@ export default function TestimonialsScreen() {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 20 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Back Button */}
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <ChevronLeft color={Colors.white} size={28} />
         </TouchableOpacity>
 
-        {/* Title */}
         <Text style={styles.title}>Avalie-nos</Text>
 
-        {/* Rating Card */}
         <View style={styles.ratingCard}>
           <View style={styles.ratingContent}>
             <View style={styles.starsRow}>
@@ -103,26 +99,36 @@ export default function TestimonialsScreen() {
               {renderStars(5)}
             </View>
           </View>
-          <View style={styles.laurelLeft}>🏆</View>
-          <View style={styles.laurelRight}>🏆</View>
+          <View style={styles.laurelLeft}>
+            <Text style={styles.laurelEmoji}>🏆</Text>
+          </View>
+          <View style={styles.laurelRight}>
+            <Text style={styles.laurelEmoji}>🏆</Text>
+          </View>
         </View>
 
-        {/* Main Message */}
         <Text style={styles.mainMessage}>
           LacNutry foi feito para{"\n"}pessoas como você
         </Text>
 
-        {/* Users Badge */}
         <View style={styles.usersBadge}>
           <View style={styles.avatarsRow}>
-            <Image source={require('@/assets/images/D1.png')} style={styles.avatarImage} />
-            <Image source={require('@/assets/images/D2.png')} style={[styles.avatarImage, styles.avatarOverlap]} />
-            <Image source={require('@/assets/images/D3.png')} style={[styles.avatarImage, styles.avatarOverlap]} />
+            <Image
+              source={require("@/assets/images/D1.png")}
+              style={styles.avatarImage}
+            />
+            <Image
+              source={require("@/assets/images/D2.png")}
+              style={[styles.avatarImage, styles.avatarOverlap]}
+            />
+            <Image
+              source={require("@/assets/images/D3.png")}
+              style={[styles.avatarImage, styles.avatarOverlap]}
+            />
           </View>
           <Text style={styles.usersText}>5M+ Usuários do LacNutry</Text>
         </View>
 
-        {/* Testimonials */}
         <View style={styles.testimonialsContainer}>
           {testimonials.map((testimonial, index) => (
             <View
@@ -134,9 +140,14 @@ export default function TestimonialsScreen() {
             >
               <View style={styles.testimonialHeader}>
                 <View style={styles.testimonialUser}>
-                  <Image source={testimonial.avatar} style={styles.testimonialAvatarImage} />
+                  <Image
+                    source={testimonial.avatar}
+                    style={styles.testimonialAvatarImage}
+                  />
                   <View style={styles.testimonialInfo}>
-                    <Text style={styles.testimonialName}>{testimonial.name}</Text>
+                    <Text style={styles.testimonialName}>
+                      {testimonial.name}
+                    </Text>
                     {testimonial.achievement && (
                       <Text style={styles.testimonialAchievement}>
                         {testimonial.achievement}
@@ -153,7 +164,6 @@ export default function TestimonialsScreen() {
           ))}
         </View>
 
-        {/* Stats Cards */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <TrendingUp color={Colors.primary} size={32} />
@@ -168,7 +178,6 @@ export default function TestimonialsScreen() {
         </View>
       </ScrollView>
 
-      {/* Continue Button */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
           <Text style={styles.continueButtonText}>Continuar</Text>
@@ -194,7 +203,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
@@ -207,7 +216,7 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
   },
   ratingCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
     borderRadius: 20,
     padding: 24,
     marginBottom: 32,
@@ -215,7 +224,7 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: "rgba(255, 255, 255, 0.25)",
   },
   ratingContent: {
     alignItems: "center",
@@ -235,7 +244,7 @@ const styles = StyleSheet.create({
   ratingSubtext: {
     fontSize: 16,
     fontWeight: "600" as const,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: "rgba(255, 255, 255, 0.9)",
   },
   laurelLeft: {
     position: "absolute",
@@ -249,6 +258,9 @@ const styles = StyleSheet.create({
     right: 20,
     top: "50%",
     transform: [{ translateY: -15 }],
+    fontSize: 40,
+  },
+  laurelEmoji: {
     fontSize: 40,
   },
   mainMessage: {
@@ -380,7 +392,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     backgroundColor: Colors.primary,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+    borderTopColor: "rgba(255, 255, 255, 0.2)",
   },
   continueButton: {
     borderRadius: 28,
@@ -401,4 +413,3 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
 });
-

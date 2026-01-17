@@ -1,6 +1,18 @@
-// Serviço de integração com Google Gemini API
-const GEMINI_API_KEY = "AIzaSyAa7-GBpUIbcox5xAUP8gJUk27-oLhlfY4";
+import { searchProductByBarcode } from "./openfoodfacts";
+
+const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || "";
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+
+// Modelos disponíveis
+export const GEMINI_MODELS = {
+  GEMINI_PRO: "gemini-pro", // Apenas texto (legado)
+  GEMINI_PRO_VISION: "gemini-pro-vision", // Visão + Texto (legado)
+  GEMINI_1_5_PRO: "gemini-1.5-pro", // Multimodal avançado
+  GEMINI_2_0_FLASH: "gemini-2.0-flash", // Multimodal rápido (recomendado)
+};
+
+// Modelo padrão atual
+const DEFAULT_MODEL = GEMINI_MODELS.GEMINI_2_0_FLASH;
 
 export interface GeminiVisionResponse {
   productName: string;
@@ -18,10 +30,49 @@ export interface GeminiVisionResponse {
   recommendations: string[];
   alternativeRecipes?: string[];
   improvements?: string[];
+  barcode?: string; // Novo campo para código de barras
 }
 
 export interface GeminiChatResponse {
   response: string;
+}
+
+function getApiKey(): string {
+  if (GEMINI_API_KEY && GEMINI_API_KEY.trim().length > 0) {
+    return GEMINI_API_KEY;
+  }
+
+  console.warn(
+    "[Gemini] Chave da API não configurada. Defina EXPO_PUBLIC_GEMINI_API_KEY ou GEMINI_API_KEY no seu .env.local."
+  );
+
+  return "";
+}
+
+function getFallbackAnalysis(additionalInfo?: string): GeminiVisionResponse {
+  const name = additionalInfo?.trim() || "Alimento analisado";
+  return {
+    productName: name,
+    hasLactose: false,
+    ingredients: [],
+    nutritionalInfo: {
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      lactose: 0,
+    },
+    risks: [
+      "Não foi possível analisar a imagem com o serviço de IA no momento.",
+      "Considere verificar o rótulo manualmente para identificar lactose e derivados.",
+    ],
+    recommendations: [
+      "Use seu Perfil de Intolerância para decidir se o consumo é seguro.",
+      "Em caso de dúvida, prefira opções claramente sem lactose.",
+    ],
+    alternativeRecipes: [],
+    improvements: [],
+  };
 }
 
 /**
@@ -30,25 +81,64 @@ export interface GeminiChatResponse {
  */
 export async function analyzeProductImage(
   base64Image: string,
-  additionalInfo?: string
+  additionalInfo?: string,
+  modelId: string = DEFAULT_MODEL
 ): Promise<GeminiVisionResponse> {
   try {
-    // Remove o prefixo data:image se houver
-    const imageData = base64Image.replace(/^data:image\/\w+;base64,/, "");
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      return getFallbackAnalysis(additionalInfo);
+    }
+
+    // Validação de compatibilidade de modelo
+    if (modelId === GEMINI_MODELS.GEMINI_PRO) {
+      console.warn("[Gemini] Modelo 'gemini-pro' não suporta imagens. Alternando para 'gemini-pro-vision'.");
+      modelId = GEMINI_MODELS.GEMINI_PRO_VISION;
+    }
+
+    // Remove o prefixo data:image se houver e limpa caracteres inválidos
+    let imageData = base64Image.replace(/^data:image\/\w+;base64,/, "");
+    
+    // Remove espaços em branco e quebras de linha que podem corromper o base64
+    imageData = imageData.replace(/\s/g, "");
+    
+    // Validar se é um base64 válido
+    if (!imageData || imageData.length === 0) {
+      throw new Error("Imagem base64 vazia ou inválida");
+    }
+    
+    console.log("[Gemini] Tamanho da imagem base64:", imageData.length, "caracteres");
+    console.log("[Gemini] Iniciando chamada para API Gemini...");
+
+    // Criar controller para timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
 
     const prompt = `Você é um especialista em análise de alimentos e nutrição, focado em identificar lactose e derivados do leite.
+    
+    CAPACIDADES DE VISÃO E ANÁLISE (ATIVAS):
+    - TEXT_DETECTION (OCR): Leia atentamente todos os textos, rótulos e listas de ingredientes visíveis.
+    - LABEL_DETECTION: Identifique com precisão que alimento ou produto é este.
+    - LOGO_DETECTION: Identifique marcas conhecidas para inferir ingredientes padrão.
+    - OBJECT_LOCALIZATION: Localize os principais componentes do prato/produto.
+    - BARCODE_DETECTION: Se houver código de barras, use os números para auxiliar na identificação.
 
-Analise esta imagem de produto alimentício ou prato de comida e forneça informações PRECISAS e DETALHADAS.
+    Analise esta imagem de produto alimentício ou prato de comida e forneça informações PRECISAS e DETALHADAS.
+    
+    IMPORTANTE:
+- A imagem pode ser de QUALQUER alimento: prato pronto, sobremesa, bolo, lanche, refeição caseira ou produto industrializado, com ou sem código de barras.
+- Mesmo que não exista rótulo visível ou código de barras, você deve analisar o alimento pela aparência, formato, textura e contexto e estimar ingredientes e presença de lactose usando seu conhecimento de receitas típicas.
+- Nunca peça código de barras, nunca diga que precisa ler o rótulo para responder. Sempre dê uma estimativa útil e bem explicada.
 
 ${additionalInfo ? `Informações adicionais sobre o produto: ${additionalInfo}\n\n` : ""}
 
 INSTRUÇÕES IMPORTANTES:
-1. Identifique TODOS os ingredientes visíveis
-2. Detecte presença de lactose com ALTA PRECISÃO
-3. Classifique o nível de lactose: baixo (<5g), médio (5-12g), alto (>12g)
-4. Forneça informações nutricionais estimadas realistas
-5. Liste TODOS os riscos para intolerantes à lactose
-6. Sugira alternativas sem lactose específicas
+1. Identifique TODOS os ingredientes visíveis e, quando necessário, estime ingredientes comuns daquele tipo de alimento (ex: bolo, pizza, lasanha).
+2. Detecte presença de lactose com ALTA PRECISÃO, considerando ingredientes típicos (leite, manteiga, queijo, creme de leite etc.).
+3. Classifique o nível de lactose: baixo (<5g), médio (5-12g), alto (>12g).
+4. Forneça informações nutricionais estimadas realistas.
+5. Liste TODOS os riscos para intolerantes à lactose.
+6. Sugira alternativas sem lactose específicas.
 
 INGREDIENTES QUE CONTÊM LACTOSE:
 - Leite (integral, desnatado, em pó)
@@ -80,32 +170,36 @@ Responda OBRIGATORIAMENTE em formato JSON válido (sem markdown):
   "risks": ["liste", "todos", "os", "riscos", "para", "intolerantes"],
   "recommendations": ["sugestões", "específicas", "de", "alternativas", "sem", "lactose"],
   "alternativeRecipes": ["receitas", "alternativas", "sem", "lactose"],
-  "improvements": ["sugestões", "de", "substituições", "específicas"]
+  "improvements": ["sugestões", "de", "substituições", "específicas"],
+  "barcode": "números do código de barras se visível (apenas números)"
 }`;
 
-    const response = await fetch(
-      `${GEMINI_API_URL}/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-                {
-                  inline_data: {
-                    mime_type: "image/jpeg",
-                    data: imageData,
+    let response: Response;
+    try {
+      response = await fetch(
+        `${GEMINI_API_URL}/${modelId}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: prompt,
                   },
-                },
-              ],
-            },
-          ],
+                  {
+                    inline_data: {
+                      mime_type: "image/jpeg",
+                      data: imageData,
+                    },
+                  },
+                ],
+              },
+            ],
           generationConfig: {
             temperature: 0.4,
             topK: 32,
@@ -133,20 +227,62 @@ Responda OBRIGATORIAMENTE em formato JSON válido (sem markdown):
         }),
       }
     );
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      console.error("[Gemini] ❌ Erro de conexão:", fetchError);
+      
+      if (fetchError.name === 'AbortError') {
+        throw new Error("Tempo limite excedido. Verifique sua conexão e tente novamente.");
+      }
+      
+      throw new Error("Erro de conexão. Verifique sua internet e tente novamente.");
+    }
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error("Gemini API Error:", errorData);
-      throw new Error(`Gemini API error: ${response.status} - ${errorData}`);
+      const errorText = await response.text();
+      console.error("[Gemini] API Error Status:", response.status);
+      console.error("[Gemini] API Error Response:", errorText);
+
+      try {
+        const errorJson = JSON.parse(errorText);
+        const message: string = errorJson?.error?.message || "";
+
+        if (response.status === 429) {
+          throw new Error(
+            "Limite de uso da API do Gemini foi atingido. Acesse o painel da Google AI/Cloud, ative billing ou use outra chave com crédito para continuar usando o scanner."
+          );
+        }
+
+        if (message) {
+          throw new Error(message);
+        }
+      } catch {
+        // Se não conseguir fazer parse do JSON, cai no fallback genérico
+      }
+
+      console.warn("[Gemini] Usando análise padrão por falha na API");
+      return getFallbackAnalysis(additionalInfo);
     }
 
     const data = await response.json();
+    console.log("[Gemini] ✅ Resposta recebida com sucesso");
+    console.log("[Gemini] Candidatos:", data.candidates?.length || 0);
     
     if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      console.error("[Gemini] ❌ Resposta inválida:", JSON.stringify(data).substring(0, 500));
+      
+      // Verificar se foi bloqueado por safety
+      if (data.promptFeedback?.blockReason) {
+        throw new Error(`Conteúdo bloqueado: ${data.promptFeedback.blockReason}`);
+      }
+      
       throw new Error("Resposta inválida da API do Gemini");
     }
 
     const textResponse = data.candidates[0].content.parts[0].text;
+    console.log("[Gemini] Resposta texto (primeiros 200 chars):", textResponse.substring(0, 200));
     
     // Limpar a resposta removendo markdown se houver
     const cleanedResponse = textResponse
@@ -154,154 +290,57 @@ Responda OBRIGATORIAMENTE em formato JSON válido (sem markdown):
       .replace(/```\n?/g, "")
       .trim();
 
-    // Parse do JSON
-    const analysisResult: GeminiVisionResponse = JSON.parse(cleanedResponse);
+    console.log("[Gemini] JSON limpo (primeiros 200 chars):", cleanedResponse.substring(0, 200));
 
-    // Validação básica
-    if (typeof analysisResult.hasLactose !== "boolean") {
-      throw new Error("Resposta inválida: campo hasLactose ausente");
+    // Parse do JSON
+    let analysisResult: GeminiVisionResponse;
+    try {
+      analysisResult = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error("[Gemini] ❌ Erro ao fazer parse do JSON:", parseError);
+      console.error("[Gemini] Resposta recebida:", cleanedResponse);
+      console.warn("[Gemini] Usando análise padrão por erro de parse");
+      return getFallbackAnalysis(additionalInfo);
     }
+
+    if (typeof analysisResult.hasLactose !== "boolean") {
+      console.error("[Gemini] ❌ Campo hasLactose ausente ou inválido");
+      console.warn("[Gemini] Usando análise padrão por resposta inválida");
+      return getFallbackAnalysis(additionalInfo);
+    }
+
+    // Integração com Open Food Facts se houver código de barras
+    if (analysisResult.barcode && analysisResult.barcode.length >= 8) {
+      console.log("[Gemini] Código de barras detectado:", analysisResult.barcode);
+      const offData = await searchProductByBarcode(analysisResult.barcode);
+      
+      if (offData) {
+        console.log("[Gemini] ✅ Dados enriquecidos com Open Food Facts");
+        // Mesclar dados do Gemini com dados oficiais do OFF
+        // Priorizamos dados factuais do OFF (nutrição, ingredientes, nome)
+        // Mantemos recomendações inteligentes do Gemini
+        analysisResult = {
+          ...analysisResult,
+          productName: offData.productName,
+          ingredients: offData.ingredients.length > 0 ? offData.ingredients : analysisResult.ingredients,
+          nutritionalInfo: offData.nutritionalInfo, // OFF é mais preciso aqui
+          hasLactose: offData.hasLactose || analysisResult.hasLactose, // Se um dos dois disser que tem, tem.
+          lactoseLevel: offData.hasLactose ? "alto" : analysisResult.lactoseLevel, // Conservador
+          risks: [...new Set([...analysisResult.risks, ...offData.risks])], // Unir riscos únicos
+        };
+      }
+    }
+
+    console.log("[Gemini] ✅ Análise concluída:", analysisResult.productName);
+    console.log("[Gemini] ✅ Tem lactose:", analysisResult.hasLactose);
 
     return analysisResult;
   } catch (error) {
-    console.error("Erro ao analisar imagem com Gemini:", error);
-    throw error;
+    console.error("[Gemini] ❌ Erro ao analisar imagem:", error);
+    console.warn("[Gemini] Usando análise padrão por erro inesperado");
+    return getFallbackAnalysis(additionalInfo);
   }
 }
-
-/**
- * Envia uma mensagem para o nutricionista virtual do Gemini
- * Especializado em dietas sem lactose
- */
-export async function chatWithNutritionist(
-  userMessage: string,
-  conversationHistory: Array<{ role: "user" | "model"; text: string }> = []
-): Promise<string> {
-  try {
-    const systemPrompt = `Você é uma nutricionista virtual especializada em dietas sem lactose.
-
-ESPECIALIDADES:
-- Intolerância à lactose e APLV
-- Nutrição esportiva sem lactose
-- Cardápios personalizados sem lactose
-- Substituições de ingredientes
-- Saúde digestiva
-- Ganho/perda de peso
-- Alimentação vegetariana/vegana sem lactose
-- Meal prep e rotinas alimentares
-
-ESTILO DE COMUNICAÇÃO:
-- Amigável, acolhedora e empática
-- Use emojis para tornar a conversa mais agradável
-- Seja específica e prática
-- Forneça informações detalhadas quando solicitado
-- Adapte-se ao contexto e necessidade do usuário
-- Crie cardápios completos quando o usuário descrever sua rotina
-
-REGRAS IMPORTANTES:
-1. SEMPRE pergunte sobre a rotina do usuário quando ele mencionar: "estou com fome", "o que comer", "dieta", "cardápio"
-2. Quando o usuário descrever sua rotina (acordar, trabalho, treino, etc), CRIE um cardápio COMPLETO e DETALHADO
-3. Inclua horários, porções, e detalhes práticos
-4. Sugira receitas e alternativas sem lactose específicas
-5. Se o usuário pedir receitas, forneça ingredientes e modo de preparo
-6. Seja proativa em oferecer soluções completas
-
-EXEMPLOS DE FONTES SEM LACTOSE:
-- Leites vegetais: aveia, amêndoas, coco, soja, arroz
-- Proteínas: carnes, peixes, ovos, leguminosas, tofu
-- Queijos veganos: castanha de caju, amêndoas
-- Iogurtes: coco, soja, amêndoas
-- Manteiga: óleo de coco, margarina vegana, azeite
-
-SEMPRE forneça respostas práticas, detalhadas e personalizadas!`;
-
-    // Construir o histórico de conversa
-    const contents = [
-      {
-        role: "user",
-        parts: [{ text: systemPrompt }],
-      },
-      {
-        role: "model",
-        parts: [
-          {
-            text: "Entendido! Sou sua nutricionista especializada em dietas sem lactose. Estou pronta para ajudar com cardápios personalizados, substituições, receitas e orientações nutricionais. Como posso ajudar você hoje? 😊",
-          },
-        ],
-      },
-    ];
-
-    // Adicionar histórico de conversa
-    conversationHistory.forEach((msg) => {
-      contents.push({
-        role: msg.role,
-        parts: [{ text: msg.text }],
-      });
-    });
-
-    // Adicionar mensagem atual do usuário
-    contents.push({
-      role: "user",
-      parts: [{ text: userMessage }],
-    });
-
-    const response = await fetch(
-      `${GEMINI_API_URL}/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: contents,
-          generationConfig: {
-            temperature: 0.9,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 2048,
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_NONE",
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_NONE",
-            },
-            {
-              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-              threshold: "BLOCK_NONE",
-            },
-            {
-              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-              threshold: "BLOCK_NONE",
-            },
-          ],
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error("Gemini API Error:", errorData);
-      throw new Error(`Gemini API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-      throw new Error("Resposta inválida da API do Gemini");
-    }
-
-    const textResponse = data.candidates[0].content.parts[0].text;
-    return textResponse;
-  } catch (error) {
-    console.error("Erro ao conversar com nutricionista Gemini:", error);
-    throw error;
-  }
-}
-
 
 
 

@@ -1,218 +1,330 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   TextInput,
-  ActivityIndicator,
+  Modal,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Search, Clock, Users, TrendingUp, Coffee, Utensils, Moon, Cake, ChevronDown } from "lucide-react-native";
+import { Plus, AlertCircle, Clock, Activity, TrendingDown, Lock, Calendar, Zap } from "lucide-react-native";
 import { router } from "expo-router";
 import Colors from "@/constants/colors";
-import { recipes } from "@/mocks/recipes";
-import { Recipe } from "@/types/recipe";
+import { useProfile } from "@/contexts/ProfileContext";
 
-const RECIPES_PER_PAGE = 20;
-
-export default function ReceitasScreen() {
+export default function ReactionAlertsScreen() {
   const insets = useSafeAreaInsets();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState<string>("todas");
-  const [displayedCount, setDisplayedCount] = useState(RECIPES_PER_PAGE);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const { reactions, addReaction, getReactionPatterns } = useProfile();
+  const [showAddModal, setShowAddModal] = useState(false);
+  
+  // Formulário
+  const [product, setProduct] = useState("");
+  const [timeToSymptoms, setTimeToSymptoms] = useState("");
+  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
+  const [intensity, setIntensity] = useState<1 | 2 | 3 | 4 | 5>(3);
+  const [notes, setNotes] = useState("");
 
-  const filters = [
-    { id: "todas", label: "Todas", icon: null },
-    { id: "café da manhã", label: "Café", icon: Coffee },
-    { id: "almoço", label: "Almoço", icon: Utensils },
-    { id: "jantar", label: "Jantar", icon: Moon },
-    { id: "sobremesa", label: "Sobremesa", icon: Cake },
+  const symptomOptions = [
+    "Dor abdominal",
+    "Gases",
+    "Diarreia",
+    "Náusea",
+    "Inchaço",
+    "Cólicas",
+    "Vômito",
+    "Mal-estar",
   ];
 
-  // Resetar contador quando filtro ou busca mudar
-  useEffect(() => {
-    setDisplayedCount(RECIPES_PER_PAGE);
-  }, [searchQuery, selectedFilter]);
-
-  const filteredRecipes = recipes.filter((recipe) => {
-    const matchesSearch = recipe.title
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesFilter =
-      selectedFilter === "todas" || recipe.tags.includes(selectedFilter);
-    return matchesSearch && matchesFilter;
-  });
-
-  // Receitas a serem exibidas (com paginação)
-  const displayedRecipes = filteredRecipes.slice(0, displayedCount);
-  const hasMoreRecipes = displayedCount < filteredRecipes.length;
-
-  const handleLoadMore = () => {
-    setIsLoadingMore(true);
-    // Simular um pequeno delay para UX
-    setTimeout(() => {
-      setDisplayedCount(prev => Math.min(prev + RECIPES_PER_PAGE, filteredRecipes.length));
-      setIsLoadingMore(false);
-    }, 300);
+  const toggleSymptom = (symptom: string) => {
+    setSelectedSymptoms(prev =>
+      prev.includes(symptom)
+        ? prev.filter(s => s !== symptom)
+        : [...prev, symptom]
+    );
   };
 
-  const renderRecipeCard = (recipe: Recipe) => (
-    <TouchableOpacity 
-      key={recipe.id} 
-      style={styles.recipeCard} 
-      activeOpacity={0.8}
-      onPress={() => router.push(`/receita/${recipe.id}`)}
-    >
-      <Image
-        source={{ uri: recipe.imageUrl }}
-        style={styles.cardImage}
-        resizeMode="cover"
-      />
-      <View style={styles.cardContent}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle} numberOfLines={2}>
-            {recipe.title}
-          </Text>
-          <View style={styles.difficultyBadge}>
-            <Text style={styles.difficultyText}>{recipe.difficulty}</Text>
-          </View>
-        </View>
-        <Text style={styles.cardDescription} numberOfLines={2}>
-          {recipe.description}
-        </Text>
-        <View style={styles.cardMeta}>
-          <View style={styles.metaItem}>
-            <Clock size={14} color={Colors.textSecondary} />
-            <Text style={styles.metaText}>{recipe.prepTime} min</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Users size={14} color={Colors.textSecondary} />
-            <Text style={styles.metaText}>{recipe.servings} porções</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <TrendingUp size={14} color={Colors.success} />
-            <Text style={[styles.metaText, { color: Colors.success }]}>
-              {recipe.nutritionInfo?.calories || 0} cal
-            </Text>
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+  const handleAddReaction = async () => {
+    if (!product.trim() || selectedSymptoms.length === 0) {
+      Alert.alert("Atenção", "Preencha o produto e selecione pelo menos um sintoma.");
+      return;
+    }
+
+    const timeInMinutes = parseInt(timeToSymptoms) || 0;
+
+    await addReaction({
+      product: product.trim(),
+      timeToSymptoms: timeInMinutes,
+      symptoms: selectedSymptoms,
+      intensity,
+      notes: notes.trim() || undefined,
+    });
+
+    // Resetar formulário
+    setProduct("");
+    setTimeToSymptoms("");
+    setSelectedSymptoms([]);
+    setIntensity(3);
+    setNotes("");
+    setShowAddModal(false);
+
+    Alert.alert("Sucesso!", "Reação registrada com sucesso.");
+  };
+
+  const patterns = getReactionPatterns();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Receitas</Text>
-        <Text style={styles.headerSubtitle}>
-          {filteredRecipes.length} receitas sem lactose
-        </Text>
-        {displayedCount < filteredRecipes.length && (
-          <Text style={styles.headerLoadingInfo}>
-            Exibindo {displayedCount} de {filteredRecipes.length}
+    <>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Alertas de Reação</Text>
+          <Text style={styles.headerSubtitle}>
+            {reactions.length} {reactions.length === 1 ? 'reação registrada' : 'reações registradas'}
           </Text>
-        )}
-      </View>
-
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBox}>
-          <Search size={20} color={Colors.textSecondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar receitas..."
-            placeholderTextColor={Colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
         </View>
-      </View>
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
         <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filtersScrollView}
-          contentContainerStyle={styles.filtersContainer}
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          {filters.map((filter) => {
-            const Icon = filter.icon;
-            return (
-              <TouchableOpacity
-                key={filter.id}
-                style={[
-                  styles.filterChip,
-                  selectedFilter === filter.id && styles.filterChipActive,
-                ]}
-                onPress={() => setSelectedFilter(filter.id)}
-                activeOpacity={0.7}
-              >
-                {Icon && (
-                  <Icon
-                    size={20}
-                    color={
-                      selectedFilter === filter.id
-                        ? Colors.white
-                        : Colors.text
-                    }
-                  />
-                )}
-                <Text
-                  style={[
-                    styles.filterText,
-                    selectedFilter === filter.id && styles.filterTextActive,
-                  ]}
-                >
-                  {filter.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+          {patterns && reactions.length >= 3 && (
+            <View style={styles.patternsCard}>
+              <View style={styles.patternsHeader}>
+                <TrendingDown size={24} color={Colors.primary} />
+                <Text style={styles.patternsTitle}>Padrões Identificados</Text>
+              </View>
+              
+              {patterns.mostProblematicProducts.length > 0 && (
+                <View style={styles.patternSection}>
+                  <Text style={styles.patternLabel}>Produtos Mais Problemáticos:</Text>
+                  {patterns.mostProblematicProducts.slice(0, 3).map((item, index) => (
+                    <View key={index} style={styles.patternItem}>
+                      <Text style={styles.patternProduct}>• {item.product}</Text>
+                      <Text style={styles.patternCount}>{item.count}x</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <View style={styles.patternSection}>
+                <Text style={styles.patternLabel}>Sintomas Mais Comuns:</Text>
+                {patterns.commonSymptoms.slice(0, 3).map((item, index) => (
+                  <Text key={index} style={styles.patternText}>
+                    • {item.symptom} ({item.count}x)
+                  </Text>
+                ))}
+              </View>
+
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Activity size={16} color={Colors.primary} />
+                  <Text style={styles.statValue}>
+                    {patterns.avgIntensity.toFixed(1)}/5
+                  </Text>
+                  <Text style={styles.statLabel}>Intensidade Média</Text>
+                </View>
+                <View style={styles.statItem}>
+                  <Clock size={16} color={Colors.primary} />
+                  <Text style={styles.statValue}>
+                    {Math.round(patterns.avgTimeToSymptoms)} min
+                  </Text>
+                  <Text style={styles.statLabel}>Tempo Médio</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {reactions.length === 0 ? (
+            <View style={styles.emptyState}>
+              <AlertCircle size={64} color={Colors.textSecondary} />
+              <Text style={styles.emptyStateTitle}>
+                Nenhuma reação registrada
+              </Text>
+              <Text style={styles.emptyStateText}>
+                Comece a registrar suas reações para identificar padrões e receber alertas personalizados
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.reactionsContainer}>
+              <Text style={styles.sectionTitle}>Histórico de Reações</Text>
+              {reactions.map((reaction) => (
+                <View key={reaction.id} style={styles.reactionCard}>
+                  <View style={styles.reactionHeader}>
+                    <Text style={styles.reactionProduct}>{reaction.product}</Text>
+                    <View style={[styles.intensityBadge, { 
+                      backgroundColor: reaction.intensity >= 4 ? '#FFE5E5' : 
+                                      reaction.intensity >= 3 ? '#FFF4E6' : '#E8F5E9'
+                    }]}>
+                      <Text style={[styles.intensityText, {
+                        color: reaction.intensity >= 4 ? Colors.error : 
+                               reaction.intensity >= 3 ? Colors.warning : Colors.success
+                      }]}>
+                        {reaction.intensity}/5
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.reactionMeta}>
+                    <View style={styles.metaItem}>
+                      <Clock size={14} color={Colors.textSecondary} />
+                      <Text style={styles.metaText}>
+                        {reaction.timeToSymptoms > 0 
+                          ? `${reaction.timeToSymptoms} min` 
+                          : 'Imediato'}
+                      </Text>
+                    </View>
+                    <View style={styles.metaItem}>
+                      <Calendar size={14} color={Colors.textSecondary} />
+                      <Text style={styles.metaText}>
+                        {new Date(reaction.date).toLocaleDateString('pt-BR')}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.symptomsContainer}>
+                    {reaction.symptoms.map((symptom, index) => (
+                      <View key={index} style={styles.symptomChip}>
+                        <Text style={styles.symptomText}>{symptom}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  {reaction.notes && (
+                    <Text style={styles.reactionNotes}>{reaction.notes}</Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
         </ScrollView>
 
-        {filteredRecipes.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>
-              Nenhuma receita encontrada
-            </Text>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setShowAddModal(true)}
+        >
+          <Plus size={24} color={Colors.white} />
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Registrar Reação</Text>
+            <TouchableOpacity onPress={() => setShowAddModal(false)}>
+              <Text style={styles.modalCancel}>Cancelar</Text>
+            </TouchableOpacity>
           </View>
-        ) : (
-          <>
-            {displayedRecipes.map(renderRecipeCard)}
-            
-            {hasMoreRecipes && (
-              <TouchableOpacity
-                style={styles.loadMoreButton}
-                onPress={handleLoadMore}
-                disabled={isLoadingMore}
-                activeOpacity={0.8}
-              >
-                {isLoadingMore ? (
-                  <ActivityIndicator color={Colors.primary} size="small" />
-                ) : (
-                  <>
-                    <ChevronDown size={20} color={Colors.primary} />
-                    <Text style={styles.loadMoreText}>
-                      Carregar mais receitas
+
+          <ScrollView
+            style={styles.modalContent}
+            contentContainerStyle={styles.modalScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Produto/Alimento Consumido *</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Ex: Queijo mussarela"
+                placeholderTextColor={Colors.textSecondary}
+                value={product}
+                onChangeText={setProduct}
+              />
+            </View>
+
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Tempo até os sintomas (minutos)</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Ex: 30"
+                placeholderTextColor={Colors.textSecondary}
+                value={timeToSymptoms}
+                onChangeText={setTimeToSymptoms}
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Sintomas *</Text>
+              <View style={styles.symptomsGrid}>
+                {symptomOptions.map((symptom) => (
+                  <TouchableOpacity
+                    key={symptom}
+                    style={[
+                      styles.symptomOption,
+                      selectedSymptoms.includes(symptom) && styles.symptomOptionActive
+                    ]}
+                    onPress={() => toggleSymptom(symptom)}
+                  >
+                    <Text
+                      style={[
+                        styles.symptomOptionText,
+                        selectedSymptoms.includes(symptom) && styles.symptomOptionTextActive
+                      ]}
+                    >
+                      {symptom}
                     </Text>
-                    <Text style={styles.loadMoreSubtext}>
-                      +{Math.min(RECIPES_PER_PAGE, filteredRecipes.length - displayedCount)} receitas
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Intensidade: {intensity}/5</Text>
+              <View style={styles.intensitySelector}>
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <TouchableOpacity
+                    key={level}
+                    style={[
+                      styles.intensityButton,
+                      intensity === level && styles.intensityButtonActive,
+                      { backgroundColor: 
+                        level <= 2 ? '#E8F5E9' :
+                        level === 3 ? '#FFF4E6' : '#FFE5E5'
+                      }
+                    ]}
+                    onPress={() => setIntensity(level as 1 | 2 | 3 | 4 | 5)}
+                  >
+                    <Text style={[
+                      styles.intensityButtonText,
+                      intensity === level && styles.intensityButtonTextActive
+                    ]}>
+                      {level}
                     </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
-          </>
-        )}
-      </ScrollView>
-    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Observações (opcional)</Text>
+              <TextInput
+                style={styles.formTextArea}
+                placeholder="Ex: Comi em jejum, estava com estresse..."
+                placeholderTextColor={Colors.textSecondary}
+                value={notes}
+                onChangeText={setNotes}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleAddReaction}
+            >
+              <Zap size={20} color={Colors.white} />
+              <Text style={styles.submitButtonText}>Registrar Reação</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -237,134 +349,132 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
   },
-  headerLoadingInfo: {
-    fontSize: 12,
-    color: Colors.primary,
-    fontWeight: "600" as const,
-    marginTop: 4,
-  },
-  searchContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-    backgroundColor: Colors.background,
-  },
-  searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  searchInput: {
+  lockedContainer: {
     flex: 1,
-    fontSize: 16,
-    color: Colors.text,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 32,
   },
-  filtersScrollView: {
-    flexGrow: 0,
-    marginBottom: 16,
-  },
-  filtersContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  filterChip: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: Colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  lockedIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    marginBottom: 24,
   },
-  filterChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  filterText: {
-    fontSize: 12,
-    fontWeight: "600" as const,
+  lockedTitle: {
+    fontSize: 24,
+    fontWeight: "700" as const,
     color: Colors.text,
+    marginBottom: 12,
+    textAlign: "center",
   },
-  filterTextActive: {
+  lockedDescription: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    marginBottom: 32,
+  },
+  upgradeButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  upgradeButtonText: {
+    fontSize: 16,
+    fontWeight: "700" as const,
     color: Colors.white,
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 20,
-    gap: 16,
+    padding: 20,
+    paddingBottom: 80,
   },
-  recipeCard: {
+  patternsCard: {
     backgroundColor: Colors.white,
     borderRadius: 16,
-    overflow: "hidden",
+    padding: 20,
+    marginBottom: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 3,
   },
-  cardImage: {
-    width: "100%",
-    height: 200,
-  },
-  cardContent: {
-    padding: 16,
-  },
-  cardHeader: {
+  patternsHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
+    alignItems: "center",
     gap: 12,
+    marginBottom: 16,
   },
-  cardTitle: {
-    flex: 1,
+  patternsTitle: {
     fontSize: 18,
     fontWeight: "700" as const,
     color: Colors.text,
   },
-  difficultyBadge: {
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+  patternSection: {
+    marginBottom: 16,
   },
-  difficultyText: {
-    fontSize: 12,
+  patternLabel: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  patternItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  patternProduct: {
+    fontSize: 14,
+    color: Colors.text,
+    flex: 1,
+  },
+  patternCount: {
+    fontSize: 14,
     fontWeight: "600" as const,
     color: Colors.primary,
   },
-  cardDescription: {
+  patternText: {
     fontSize: 14,
-    lineHeight: 20,
-    color: Colors.textSecondary,
-    marginBottom: 12,
+    color: Colors.text,
+    marginBottom: 4,
   },
-  cardMeta: {
+  statsRow: {
     flexDirection: "row",
-    gap: 16,
+    gap: 12,
+    marginTop: 8,
   },
-  metaItem: {
-    flexDirection: "row",
+  statItem: {
+    flex: 1,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 12,
+    padding: 12,
     alignItems: "center",
     gap: 4,
   },
-  metaText: {
-    fontSize: 13,
+  statValue: {
+    fontSize: 18,
+    fontWeight: "700" as const,
+    color: Colors.primary,
+  },
+  statLabel: {
+    fontSize: 11,
     color: Colors.textSecondary,
-    fontWeight: "500" as const,
+    textAlign: "center",
   },
   emptyState: {
     flex: 1,
@@ -372,38 +482,239 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 60,
   },
-  emptyStateText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: "700" as const,
+    color: Colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: "center",
   },
-  loadMoreButton: {
+  emptyStateText: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    paddingHorizontal: 32,
+  },
+  reactionsContainer: {
+    gap: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700" as const,
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  reactionCard: {
     backgroundColor: Colors.white,
     borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 24,
-    marginTop: 8,
-    marginBottom: 8,
-    alignItems: "center",
-    justifyContent: "center",
+    padding: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-    borderWidth: 2,
-    borderColor: Colors.primaryLight,
-    minHeight: 80,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    marginBottom: 12,
   },
-  loadMoreText: {
+  reactionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  reactionProduct: {
     fontSize: 16,
     fontWeight: "700" as const,
-    color: Colors.primary,
-    marginTop: 8,
+    color: Colors.text,
+    flex: 1,
   },
-  loadMoreSubtext: {
+  intensityBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  intensityText: {
+    fontSize: 12,
+    fontWeight: "700" as const,
+  },
+  reactionMeta: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 12,
+  },
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  metaText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  symptomsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 8,
+  },
+  symptomChip: {
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  symptomText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: Colors.primary,
+  },
+  reactionNotes: {
     fontSize: 13,
     color: Colors.textSecondary,
-    marginTop: 4,
-    fontWeight: "500" as const,
+    fontStyle: "italic" as const,
+    marginTop: 8,
+  },
+  addButton: {
+    position: "absolute",
+    right: 20,
+    bottom: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: Colors.backgroundSecondary,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700" as const,
+    color: Colors.text,
+  },
+  modalCancel: {
+    fontSize: 16,
+    color: Colors.primary,
+    fontWeight: "600" as const,
+  },
+  modalContent: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    padding: 20,
+  },
+  formSection: {
+    marginBottom: 20,
+  },
+  formLabel: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: Colors.text,
+    marginBottom: 8,
+  },
+  formInput: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    color: Colors.text,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  formTextArea: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    color: Colors.text,
+    minHeight: 100,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  symptomsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  symptomOption: {
+    backgroundColor: Colors.white,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  symptomOptionActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  symptomOptionText: {
+    fontSize: 14,
+    color: Colors.text,
+  },
+  symptomOptionTextActive: {
+    color: Colors.primary,
+    fontWeight: "600" as const,
+  },
+  intensitySelector: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  intensityButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  intensityButtonActive: {
+    borderColor: Colors.primary,
+  },
+  intensityButtonText: {
+    fontSize: 18,
+    fontWeight: "600" as const,
+    color: Colors.text,
+  },
+  intensityButtonTextActive: {
+    fontWeight: "700" as const,
+    color: Colors.primary,
+  },
+  submitButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    backgroundColor: Colors.primary,
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    marginTop: 12,
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: "700" as const,
+    color: Colors.white,
   },
 });

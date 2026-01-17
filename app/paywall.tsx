@@ -120,9 +120,9 @@ const pricingPlans: PricingPlan[] = [
   },
 ];
 
-function PaywallScreen() {
+export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
-  const { completeSubscription, profile, hasSubscription } = useProfile();
+  const { completeSubscription, profile, hasSubscription, isPremium, setPremiumStatus } = useProfile();
   
   // Hook customizado de compras (padrão DoableDanny) com fallback para erro
   let iapHook;
@@ -167,6 +167,16 @@ function PaywallScreen() {
   // Estados do FAQ
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   
+  // Sincronizar status premium do hook com o contexto
+  useEffect(() => {
+    if (isPremiumActive && !isPremium) {
+      console.log('[Paywall] Premium ativado pelo hook IAP, atualizando contexto...');
+      setPremiumStatus(true);
+      // Redirecionar para home se necessário, ou apenas fechar o paywall
+      // router.replace('/(tabs)'); 
+    }
+  }, [isPremiumActive, isPremium, setPremiumStatus]);
+
   useEffect(() => {
     // Animação de pulso contínua
     Animated.loop(
@@ -239,21 +249,6 @@ function PaywallScreen() {
     const secs = seconds % 60;
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
-
-  // Timer de oferta
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prevTime) => {
-        if (prevTime <= 0) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
 
   // ==========================================
   // FUNÇÃO DE COMPRA SIMPLIFICADA (padrão DoableDanny)
@@ -609,9 +604,8 @@ function PaywallScreen() {
                     )}
                   </View>
                 </View>
-                
                 {isExpanded && (
-                  <View style={styles.faqAnswerContainer}>
+                  <View style={styles.faqBody}>
                     <Text style={styles.faqAnswer}>{faq.answer}</Text>
                   </View>
                 )}
@@ -619,10 +613,15 @@ function PaywallScreen() {
             );
           })}
         </View>
-
-        <Text style={styles.footerDisclaimer}>
-          Ao assinar, você concorda com nossos Termos de Uso e Política de Privacidade
-        </Text>
+        
+        <View style={styles.footer}>
+          <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
+            <Text style={styles.skipButton}>Pular por enquanto</Text>
+          </TouchableOpacity>
+          <Text style={styles.disclaimer}>
+            Cobrança recorrente. Cancele a qualquer momento.
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -633,6 +632,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
   content: {
     flex: 1,
   },
@@ -640,102 +644,98 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   logoContainer: {
-    alignItems: "center",
-    paddingVertical: 24,
+    alignItems: 'center',
+    marginBottom: 20,
   },
   appName: {
-    fontSize: 32,
-    fontWeight: "800" as const,
-    color: Colors.text,
-    letterSpacing: -0.5,
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.primary,
   },
   benefitsContainer: {
-    marginBottom: 24,
-    paddingHorizontal: 20,
+    marginHorizontal: 20,
+    marginBottom: 30,
   },
   benefitRow: {
-    marginBottom: 16,
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   trialBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
     borderRadius: 20,
+    gap: 8,
   },
   trialBadgeText: {
-    fontSize: 14,
-    fontWeight: "700" as const,
     color: Colors.white,
-    letterSpacing: 1,
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   benefitsList: {
-    gap: 14,
+    gap: 15,
   },
   benefitItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
   },
   benefitText: {
     fontSize: 16,
     color: Colors.text,
-    fontWeight: "500" as const,
+    flex: 1,
   },
   plansContainer: {
-    gap: 12,
-    marginBottom: 24,
     paddingHorizontal: 20,
+    gap: 15,
+    marginBottom: 30,
   },
   planCard: {
     backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 20,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: Colors.border,
+    position: 'relative',
+    overflow: 'visible',
   },
   planCardSelected: {
     borderColor: Colors.primary,
-    borderWidth: 3,
+    borderWidth: 2,
+    backgroundColor: '#F0F9F4',
   },
   planCardPopular: {
     borderColor: Colors.primary,
   },
   popularBadge: {
-    position: "absolute",
+    position: 'absolute',
     top: -12,
-    left: 20,
-    backgroundColor: "#FFD700",
+    right: 20,
+    backgroundColor: Colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 12,
+    zIndex: 10,
   },
   popularBadgeText: {
-    fontSize: 11,
-    fontWeight: "700" as const,
-    color: "#000",
-    letterSpacing: 0.5,
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   planHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   planInfo: {
     flex: 1,
   },
-  planPricing: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
   planTitle: {
     fontSize: 18,
-    fontWeight: "700" as const,
+    fontWeight: 'bold',
     color: Colors.text,
     marginBottom: 4,
   },
@@ -743,19 +743,22 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   planSavings: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    textDecorationLine: "line-through",
-    flexWrap: "wrap",
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '600',
+  },
+  planPricing: {
+    alignItems: 'flex-end',
   },
   planSubtitle: {
     fontSize: 16,
-    fontWeight: "600" as const,
     color: Colors.textSecondary,
-    marginRight: 12,
+    marginBottom: 8,
+    fontWeight: '500',
   },
   planSubtitleSelected: {
     color: Colors.primary,
+    fontWeight: 'bold',
   },
   planCheckbox: {
     width: 24,
@@ -763,8 +766,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   planCheckboxSelected: {
     backgroundColor: Colors.primary,
@@ -772,199 +775,128 @@ const styles = StyleSheet.create({
   },
   ctaSection: {
     paddingHorizontal: 20,
-    marginBottom: 24,
+    marginBottom: 40,
   },
   ctaTagline: {
-    fontSize: 16,
-    fontWeight: "600" as const,
-    color: Colors.text,
-    textAlign: "center",
-    marginBottom: 16,
-    fontStyle: "italic",
+    textAlign: 'center',
+    color: Colors.textSecondary,
+    fontSize: 14,
+    marginBottom: 15,
+    fontStyle: 'italic',
   },
   subscribeButton: {
-    borderRadius: 28,
-    overflow: "hidden",
-    shadowColor: "#000",
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 6,
   },
   subscribeButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.7,
   },
   subscribeButtonGradient: {
     paddingVertical: 18,
-    paddingHorizontal: 32,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   subscribeButtonText: {
-    fontSize: 18,
-    fontWeight: "700" as const,
     color: Colors.white,
-  },
-  centerContent: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginTop: 16,
-  },
-  errorText: {
     fontSize: 18,
-    fontWeight: "600" as const,
-    color: Colors.error,
-    textAlign: "center",
-    marginBottom: 20,
+    fontWeight: 'bold',
   },
-  debugText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    marginTop: 8,
-    paddingHorizontal: 20,
-  },
-  footerDisclaimer: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 16,
-    marginTop: 16,
-    marginHorizontal: 20,
-    paddingBottom: 20,
-  },
-  // ==========================================
-  // FAQ STYLES
-  // ==========================================
   faqContainer: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    marginTop: 8,
+    paddingHorizontal: 20,
+    marginBottom: 30,
   },
   faqTitle: {
     fontSize: 20,
-    fontWeight: "800" as const,
+    fontWeight: 'bold',
     color: Colors.text,
-    marginBottom: 4,
-    textAlign: "center",
+    marginBottom: 5,
   },
   faqSubtitle: {
     fontSize: 14,
     color: Colors.textSecondary,
-    marginBottom: 16,
-    textAlign: "center",
+    marginBottom: 20,
   },
   faqCard: {
     backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 2,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
     borderColor: Colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    overflow: 'hidden',
   },
   faqCardExpanded: {
     borderColor: Colors.primary,
-    shadowOpacity: 0.1,
-    elevation: 4,
+    backgroundColor: '#F9FAFB',
   },
   faqHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
   },
   faqIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: `${Colors.primary}15`,
-    alignItems: "center",
-    justifyContent: "center",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   faqQuestion: {
     flex: 1,
     fontSize: 15,
-    fontWeight: "600" as const,
+    fontWeight: '600',
     color: Colors.text,
-    lineHeight: 20,
   },
   faqChevron: {
-    width: 24,
-    height: 24,
-    alignItems: "center",
-    justifyContent: "center",
+    marginLeft: 10,
   },
-  faqAnswerContainer: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+  faqBody: {
+    paddingHorizontal: 15,
+    paddingBottom: 15,
+    paddingLeft: 59, // Alinhar com o texto da pergunta
   },
   faqAnswer: {
     fontSize: 14,
+    color: Colors.textSecondary,
     lineHeight: 22,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    gap: 15,
+  },
+  skipButton: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+    textDecorationLine: 'underline',
+  },
+  disclaimer: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  loadingText: {
+    marginTop: 20,
+    fontSize: 16,
     color: Colors.text,
   },
+  debugText: {
+    marginTop: 10,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 18,
+    color: 'red',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
 });
-
-// Componente com ErrorBoundary manual
-class PaywallErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean; error: Error | null }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: any) {
-    console.error('[Paywall] Erro capturado:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <View style={[styles.container, styles.centerContent]}>
-          <AlertTriangle color={Colors.error} size={64} />
-          <Text style={styles.errorText}>Erro ao carregar paywall</Text>
-          <Text style={styles.debugText}>
-            {this.state.error?.message || 'Erro desconhecido'}
-          </Text>
-          <TouchableOpacity
-            style={styles.subscribeButton}
-            onPress={() => {
-              this.setState({ hasError: false, error: null });
-              router.replace('/(tabs)');
-            }}
-          >
-            <View style={styles.subscribeButtonGradient}>
-              <Text style={styles.subscribeButtonText}>Ir para o App</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
-export default function PaywallScreenWithErrorBoundary() {
-  return (
-    <PaywallErrorBoundary>
-      <PaywallScreen />
-    </PaywallErrorBoundary>
-  );
-}

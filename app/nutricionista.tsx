@@ -1,187 +1,255 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
   TouchableOpacity,
   TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
+  Alert,
 } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Send } from "lucide-react-native";
+import { User } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { chatWithNutritionist } from "@/lib/gemini";
+import { useProfile } from "@/contexts/ProfileContext";
 
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
-
-export default function NutritionistScreen() {
+export default function IntoleranceProfileScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const scrollViewRef = useRef<ScrollView>(null);
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Armazena histórico de conversa para contexto do Gemini
-  const conversationHistory = useRef<Array<{ role: "user" | "model"; text: string }>>([]);
-  
-  const handleSend = async () => {
-    if (input.trim()) {
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        role: "user",
-        content: input.trim(),
-      };
-      
-      setMessages(prev => [...prev, userMessage]);
-      const userInput = input.trim();
-      setInput("");
-      setIsLoading(true);
-      
-      try {
-        // Chamar API do Gemini
-        const aiResponse = await chatWithNutritionist(
-          userInput,
-          conversationHistory.current
-        );
-        
-        // Atualizar histórico
-        conversationHistory.current.push(
-          { role: "user", text: userInput },
-          { role: "model", text: aiResponse }
-        );
-        
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: aiResponse,
-        };
-        
-        setMessages(prev => [...prev, aiMessage]);
-      } catch (error) {
-        console.error("Erro ao obter resposta:", error);
-        
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, verifique sua conexão e tente novamente. 🙏",
-        };
-        
-        setMessages(prev => [...prev, errorMessage]);
-      } finally {
-        setIsLoading(false);
-      }
+  const { profile, updateProfile } = useProfile();
+
+  const currentProfile = profile.intoleranceProfile;
+
+  const [level, setLevel] = useState<"leve" | "moderada" | "severa">(
+    currentProfile?.level || "moderada"
+  );
+  const [lactaseUse, setLactaseUse] = useState<"sempre" | "as-vezes" | "nunca">(
+    currentProfile?.lactaseUse || "as-vezes"
+  );
+  const [problematicFoods, setProblematicFoods] = useState(
+    currentProfile?.problematicFoods.join(", ") || ""
+  );
+  const [symptomFrequency, setSymptomFrequency] = useState(
+    currentProfile?.symptomFrequency || ""
+  );
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateProfile({
+        ...profile,
+        intoleranceProfile: {
+          level,
+          lactaseUse,
+          problematicFoods: problematicFoods
+            .split(",")
+            .map((f) => f.trim())
+            .filter((f) => f),
+          symptomFrequency: symptomFrequency.trim(),
+        },
+      });
+
+      Alert.alert(
+        "Sucesso",
+        "Perfil de intolerância salvo com sucesso!",
+        [{ text: "OK", onPress: () => router.back() }],
+      );
+    } catch {
+      Alert.alert(
+        "Erro",
+        "Não foi possível salvar o perfil de intolerância",
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  useEffect(() => {
-    scrollViewRef.current?.scrollToEnd({ animated: true });
-  }, [messages]);
-
   return (
-    <>
+    <View style={styles.container}>
       <Stack.Screen
         options={{
-          title: "Nutricionista IA",
+          title: "Perfil de Intolerância",
           headerShown: true,
           headerStyle: {
             backgroundColor: Colors.background,
           },
-          headerTintColor: Colors.primary,
+          headerTintColor: Colors.text,
+          headerTitleStyle: {
+            fontWeight: "600",
+          },
         }}
       />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 32 },
+        ]}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.messagesContainer}
-          contentContainerStyle={[
-            styles.messagesContent,
-            { paddingBottom: 20 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() =>
-            scrollViewRef.current?.scrollToEnd({ animated: true })
-          }
-        >
-          {messages.length === 0 && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateTitle}>
-                Olá! 👋 Sou sua nutricionista virtual
-              </Text>
-              <Text style={styles.emptyStateText}>
-                Estou aqui para ajudar com dúvidas sobre dietas sem lactose,
-                nutrição e alimentação saudável. 
-                {'\n\n'}
-                💡 Dica: Me conte sobre sua rotina (acordar, trabalho, treino) 
-                que eu crio um cardápio completo personalizado para você!
-                {'\n\n'}
-                Como posso ajudar hoje?
-              </Text>
-            </View>
-          )}
-
-          {messages.map((message) => (
-            <View key={message.id} style={styles.messageWrapper}>
-              <View
-                style={[
-                  styles.messageBubble,
-                  message.role === "user"
-                    ? styles.userBubble
-                    : styles.assistantBubble,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.messageText,
-                    message.role === "user" && styles.userMessageText,
-                  ]}
-                >
-                  {message.content}
-                </Text>
-              </View>
-            </View>
-          ))}
-
-          {isLoading && (
-            <View style={styles.messageWrapper}>
-              <View style={[styles.messageBubble, styles.assistantBubble]}>
-                <ActivityIndicator size="small" color={Colors.primary} />
-              </View>
-            </View>
-          )}
-        </ScrollView>
-
-        <View style={[styles.inputContainer, { paddingBottom: insets.bottom + 8 }]}>
-          <TextInput
-            style={styles.input}
-            placeholder="Pergunte sobre nutrição..."
-            placeholderTextColor={Colors.textSecondary}
-            value={input}
-            onChangeText={setInput}
-            multiline
-            maxLength={500}
-          />
-          <TouchableOpacity
-            style={[styles.sendButton, (!input.trim() || isLoading) && styles.sendButtonDisabled]}
-            onPress={handleSend}
-            disabled={!input.trim() || isLoading}
-          >
-            <Send size={20} color={Colors.white} />
-          </TouchableOpacity>
+        <View style={styles.headerSection}>
+          <View style={styles.avatarContainer}>
+            <User size={32} color={Colors.primary} />
+          </View>
+          <Text style={styles.title}>Configure Seu Perfil</Text>
+          <Text style={styles.subtitle}>
+            Informe detalhes sobre sua intolerância para receber recomendações
+            personalizadas
+          </Text>
         </View>
-      </KeyboardAvoidingView>
-    </>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Grau da Intolerância</Text>
+          <View style={styles.cardGroup}>
+            <TouchableOpacity
+              style={[
+                styles.optionCard,
+                level === "leve" && styles.optionCardActive,
+              ]}
+              onPress={() => setLevel("leve")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.optionTitle}>Leve</Text>
+              <Text style={styles.optionSubtitle}>
+                Poucos sintomas, tolerância moderada
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.optionCard,
+                level === "moderada" && styles.optionCardActive,
+              ]}
+              onPress={() => setLevel("moderada")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.optionTitle}>Moderada</Text>
+              <Text style={styles.optionSubtitle}>
+                Sintomas regulares, necessita atenção
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.optionCard,
+                level === "severa" && styles.optionCardActive,
+              ]}
+              onPress={() => setLevel("severa")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.optionTitle}>Severa</Text>
+              <Text style={styles.optionSubtitle}>
+                Reações intensas, evita completamente
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Uso de Lactase</Text>
+          <View style={styles.cardGroup}>
+            <TouchableOpacity
+              style={[
+                styles.optionCard,
+                lactaseUse === "sempre" && styles.optionCardActive,
+              ]}
+              onPress={() => setLactaseUse("sempre")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.optionTitle}>Sempre</Text>
+              <Text style={styles.optionSubtitle}>
+                Uso regular antes de refeições com lactose
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.optionCard,
+                lactaseUse === "as-vezes" && styles.optionCardActive,
+              ]}
+              onPress={() => setLactaseUse("as-vezes")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.optionTitle}>Às Vezes</Text>
+              <Text style={styles.optionSubtitle}>
+                Uso ocasional quando necessário
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.optionCard,
+                lactaseUse === "nunca" && styles.optionCardActive,
+              ]}
+              onPress={() => setLactaseUse("nunca")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.optionTitle}>Nunca</Text>
+              <Text style={styles.optionSubtitle}>
+                Não utilizo suplementos
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Alimentos Problemáticos</Text>
+          <Text style={styles.sectionDescription}>
+            Liste os alimentos que causam reações frequentes (separados por
+            vírgula)
+          </Text>
+          <TextInput
+            style={styles.textArea}
+            placeholder="Ex: leite integral, queijo mussarela, iogurte natural..."
+            placeholderTextColor={Colors.textSecondary}
+            value={problematicFoods}
+            onChangeText={setProblematicFoods}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Frequência de Sintomas</Text>
+          <Text style={styles.sectionDescription}>
+            Com que frequência você apresenta sintomas?
+          </Text>
+          <TextInput
+            style={styles.textArea}
+            placeholder="Ex: 2-3 vezes por semana, raramente, somente após grandes quantidades..."
+            placeholderTextColor={Colors.textSecondary}
+            value={symptomFrequency}
+            onChangeText={setSymptomFrequency}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
+        </View>
+
+        <TouchableOpacity
+          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          activeOpacity={0.8}
+          disabled={isSaving}
+        >
+          <Text style={styles.saveButtonText}>
+            {isSaving ? "Salvando..." : "Salvar Perfil"}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.infoBox}>
+          <Text style={styles.infoText}>
+            Estes dados são usados para personalizar as recomendações do
+            scanner, alertas de risco e sugestões de produtos mais seguros
+            para você.
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -190,91 +258,114 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.backgroundSecondary,
   },
-  messagesContainer: {
+  content: {
     flex: 1,
   },
-  messagesContent: {
-    padding: 16,
-    gap: 12,
+  scrollContent: {
+    padding: 20,
   },
-  emptyState: {
+  headerSection: {
     alignItems: "center",
-    paddingVertical: 60,
-    paddingHorizontal: 32,
+    marginBottom: 24,
   },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: "700" as const,
-    color: Colors.text,
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  emptyStateText: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: Colors.textSecondary,
-    textAlign: "center",
-  },
-  messageWrapper: {
-    marginBottom: 12,
-  },
-  messageBubble: {
-    maxWidth: "80%",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-  },
-  userBubble: {
-    backgroundColor: Colors.primary,
-    alignSelf: "flex-end",
-    borderBottomRightRadius: 4,
-  },
-  assistantBubble: {
-    backgroundColor: Colors.white,
-    alignSelf: "flex-start",
-    borderBottomLeftRadius: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  messageText: {
-    fontSize: 15,
-    lineHeight: 20,
-    color: Colors.text,
-  },
-  userMessageText: {
-    color: Colors.white,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    padding: 12,
-    backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    gap: 8,
-    alignItems: "flex-end",
-  },
-  input: {
-    flex: 1,
-    backgroundColor: Colors.backgroundSecondary,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: Colors.text,
-    maxHeight: 100,
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
+  avatarContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 16,
   },
-  sendButtonDisabled: {
-    opacity: 0.5,
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  sectionDescription: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  cardGroup: {
+    gap: 12,
+  },
+  optionCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  optionCardActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  optionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  optionSubtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  textArea: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    color: Colors.text,
+    minHeight: 96,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  saveButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.white,
+  },
+  infoBox: {
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    padding: 16,
+  },
+  infoText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
   },
 });
+

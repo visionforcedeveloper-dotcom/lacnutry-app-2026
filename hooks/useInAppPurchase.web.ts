@@ -35,11 +35,3 @@ const useInAppPurchase = () => {
 };
 
 export default useInAppPurchase;
-
-
-
-
-
-
-
-

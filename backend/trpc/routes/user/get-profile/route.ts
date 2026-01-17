@@ -13,8 +13,6 @@ export const getProfileProcedure = publicProcedure
     return {
       name: "Usuário",
       email: "usuario@email.com",
-      hasCompletedQuiz: false,
-      hasSubscription: false,
     };
   });
 

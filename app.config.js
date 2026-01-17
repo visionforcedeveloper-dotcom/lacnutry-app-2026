@@ -9,7 +9,7 @@ module.exports = {
   expo: {
     name: IS_DEV ? 'LacNutry (DEV)' : 'LacNutry',
     slug: 'lacnutry-app',
-    version: IS_DEV ? '3.9.0' : '3.10.1',
+    version: IS_DEV ? '3.9.0' : '3.45.0',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'rork-app',
@@ -30,7 +30,7 @@ module.exports = {
       },
     },
     android: {
-      versionCode: 44,
+      versionCode: 77,
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',
         backgroundColor: '#ffffff',
@@ -106,10 +106,10 @@ module.exports = {
         origin: 'https://rork.com/',
       },
       eas: {
-        projectId: 'd66982fc-28b0-490e-a41d-2c5e66441d36',
+        projectId: 'feeb5134-7a2c-46ad-91f1-a3674f14d16e',
       },
     },
-    owner: 'visionforce1',
+    owner: 'visionforce4',
   },
 };
 

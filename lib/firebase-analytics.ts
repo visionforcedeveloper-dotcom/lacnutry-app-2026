@@ -1,70 +1,145 @@
-import analytics from '@react-native-firebase/analytics';
+import { Platform } from 'react-native';
+
+// Mock do analytics para quando o módulo nativo não estiver disponível (Expo Go)
+const mockAnalytics = {
+  logEvent: async (name: string, params?: any) => {
+    console.log(`[MOCK Analytics] Event: ${name}`, params);
+    return Promise.resolve();
+  },
+  setUserId: async (id: string | null) => {
+    console.log(`[MOCK Analytics] Set User ID: ${id}`);
+    return Promise.resolve();
+  },
+  setUserProperties: async (props: any) => {
+    console.log(`[MOCK Analytics] Set User Properties:`, props);
+    return Promise.resolve();
+  },
+  logScreenView: async (params: any) => {
+    console.log(`[MOCK Analytics] Log Screen View:`, params);
+    return Promise.resolve();
+  }
+};
+
+let analytics: any;
+
+try {
+  // Tenta importar o módulo nativo
+  // Se falhar (como no Expo Go), cai no catch
+  analytics = require('@react-native-firebase/analytics').default;
+} catch (error) {
+  console.warn('⚠️ Firebase Analytics nativo não encontrado. Usando mock.');
+  analytics = () => mockAnalytics;
+}
 
 export class FirebaseAnalyticsService {
+  /**
+   * Registra uso do scanner de produtos
+   */
+  static async logProductScan(hasLactose: boolean, productName?: string) {
+    try {
+      await analytics().logEvent('produto_escaneado', {
+        tem_lactose: hasLactose,
+        nome_produto: productName?.substring(0, 50) || 'desconhecido',
+        timestamp: new Date().toISOString(),
+      });
+      console.log('📊 Analytics: Produto escaneado registrado');
+    } catch (error) {
+      console.error('❌ Erro ao registrar scan:', error);
+    }
+  }
+
+  /**
+   * Registra análise de produto com IA
+   */
+  static async logProductAnalysis(
+    hasLactose: boolean,
+    lactoseLevel?: string,
+    hasPersonalizedRisk?: boolean
+  ) {
+    try {
+      await analytics().logEvent('analise_produto_ia', {
+        tem_lactose: hasLactose,
+        nivel_lactose: lactoseLevel || 'nenhum',
+        risco_personalizado: hasPersonalizedRisk || false,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('❌ Erro ao registrar análise:', error);
+    }
+  }
+
+  /**
+   * Registra registro de reação
+   */
+  static async logReactionRegistered(intensity: number, symptomsCount: number) {
+    try {
+      await analytics().logEvent('reacao_registrada', {
+        intensidade: intensity,
+        total_sintomas: symptomsCount,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('❌ Erro ao registrar reação:', error);
+    }
+  }
+
+  /**
+   * Registra visualização de receita
+   */
+  static async logRecipeView(recipeId: string, recipeName: string) {
+    try {
+      await analytics().logEvent('receita_visualizada', {
+        receita_id: recipeId,
+        nome_receita: recipeName.substring(0, 50),
+      });
+    } catch (error) {
+      console.error('❌ Erro ao registrar visualização de receita:', error);
+    }
+  }
+
+  /**
+   * Registra geração de receita com IA
+   */
+  static async logRecipeGenerated(hasPreferences: boolean) {
+    try {
+      await analytics().logEvent('receita_gerada_ia', {
+        tem_preferencias: hasPreferences,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('❌ Erro ao registrar geração de receita:', error);
+    }
+  }
+
+  /**
+   * Registra acesso a funcionalidade
+   */
+  static async logFeatureAccess(featureName: string) {
+    try {
+      await analytics().logEvent('funcionalidade_acessada', {
+        nome_funcionalidade: featureName,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('❌ Erro ao registrar acesso:', error);
+    }
+  }
+
   /**
    * Registra o início do quiz
    */
   static async logQuizStart() {
     try {
-      await analytics().logEvent('quiz_start', {
+      await analytics().logEvent('quiz_started', {
         timestamp: new Date().toISOString(),
       });
-      console.log('📊 Analytics: Quiz iniciado');
     } catch (error) {
       console.error('❌ Erro ao registrar início do quiz:', error);
     }
   }
 
   /**
-   * Registra cada resposta do quiz
-   */
-  static async logQuizAnswer(questionId: number, answerIndex: number, questionText: string) {
-    try {
-      await analytics().logEvent('quiz_answer', {
-        question_id: questionId,
-        answer_index: answerIndex,
-        question_text: questionText.substring(0, 100), // Limitar tamanho
-        timestamp: new Date().toISOString(),
-      });
-      console.log(`📊 Analytics: Resposta registrada - Q${questionId}`);
-    } catch (error) {
-      console.error('❌ Erro ao registrar resposta:', error);
-    }
-  }
-
-  /**
-   * Registra conclusão do quiz com dados completos
-   */
-  static async logQuizComplete(
-    name: string,
-    email: string,
-    answers: Record<string, number>,
-    score: number
-  ) {
-    try {
-      // Evento principal de conclusão
-      await analytics().logEvent('quiz_complete', {
-        total_questions: Object.keys(answers).length,
-        score: score,
-        timestamp: new Date().toISOString(),
-        has_name: !!name,
-        has_email: !!email,
-      });
-
-      // Definir propriedades do usuário
-      await analytics().setUserId(email); // Email como ID único
-      await analytics().setUserProperty('quiz_completed', 'true');
-      await analytics().setUserProperty('user_name', name);
-      await analytics().setUserProperty('intolerance_level', this.calculateIntoleranceLevel(answers));
-
-      console.log('📊 Analytics: Quiz completado com sucesso');
-    } catch (error) {
-      console.error('❌ Erro ao registrar conclusão do quiz:', error);
-    }
-  }
-
-  /**
-   * Registra navegação entre perguntas
+   * Registra progresso do quiz
    */
   static async logQuizProgress(currentQuestion: number, totalQuestions: number) {
     try {
@@ -73,6 +148,7 @@ export class FirebaseAnalyticsService {
         current_question: currentQuestion,
         total_questions: totalQuestions,
         progress_percentage: progress,
+        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       console.error('❌ Erro ao registrar progresso:', error);
@@ -80,42 +156,30 @@ export class FirebaseAnalyticsService {
   }
 
   /**
-   * Registra abandono do quiz
+   * Registra resposta do quiz
    */
-  static async logQuizAbandoned(currentQuestion: number, totalQuestions: number) {
+  static async logQuizAnswer(questionId: number, answerIndex: number, questionText?: string) {
     try {
-      await analytics().logEvent('quiz_abandoned', {
-        abandoned_at_question: currentQuestion,
-        total_questions: totalQuestions,
-        completion_percentage: Math.round((currentQuestion / totalQuestions) * 100),
+      await analytics().logEvent('quiz_answer', {
+        question_id: questionId,
+        answer_index: answerIndex,
+        question_text: questionText?.substring(0, 50),
+        timestamp: new Date().toISOString(),
       });
-      console.log('📊 Analytics: Quiz abandonado registrado');
     } catch (error) {
-      console.error('❌ Erro ao registrar abandono:', error);
+      console.error('❌ Erro ao registrar resposta:', error);
     }
-  }
-
-  /**
-   * Calcula nível de intolerância baseado nas respostas
-   */
-  private static calculateIntoleranceLevel(answers: Record<string, number>): string {
-    // Pergunta 1: frequência de desconforto
-    const q1 = answers['1'] || 0;
-    
-    if (q1 === 0) return 'severa'; // Sempre
-    if (q1 === 1) return 'moderada'; // Às vezes
-    if (q1 === 2) return 'leve'; // Raramente
-    return 'nenhuma'; // Nunca
   }
 
   /**
    * Registra visualização de tela motivacional
    */
-  static async logMotivationalScreen(screenType: string, screenIndex: number) {
+  static async logMotivationalScreen(type: string, index: number) {
     try {
       await analytics().logEvent('motivational_screen_view', {
-        screen_type: screenType,
-        screen_index: screenIndex,
+        screen_type: type,
+        screen_index: index,
+        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       console.error('❌ Erro ao registrar tela motivacional:', error);
@@ -123,23 +187,55 @@ export class FirebaseAnalyticsService {
   }
 
   /**
-   * Registra interação com input de texto
+   * Registra envio de input de texto (nome, email, etc)
    */
   static async logTextInputSubmit(questionId: number, inputType: string) {
     try {
       await analytics().logEvent('quiz_text_input', {
         question_id: questionId,
-        input_type: inputType, // 'name' ou 'email'
+        input_type: inputType,
+        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       console.error('❌ Erro ao registrar input de texto:', error);
     }
   }
+
+  /**
+   * Registra conclusão do quiz
+   */
+  static async logQuizComplete(
+    userName: string,
+    email: string,
+    answers: Record<string, number>,
+    score: number
+  ) {
+    try {
+      await analytics().logEvent('quiz_completed', {
+        user_name: userName, // Cuidado com PII em produção real
+        answers_count: Object.keys(answers).length,
+        score: score,
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Opcional: Identificar usuário se permitido
+      // await analytics().setUserId(email);
+    } catch (error) {
+      console.error('❌ Erro ao registrar conclusão do quiz:', error);
+    }
+  }
+
+  /**
+   * Registra abandono do quiz
+   */
+  static async logQuizAbandoned(lastQuestion: number) {
+    try {
+      await analytics().logEvent('quiz_abandoned', {
+        last_question: lastQuestion,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('❌ Erro ao registrar abandono do quiz:', error);
+    }
+  }
 }
-
-
-
-
-
-
-
