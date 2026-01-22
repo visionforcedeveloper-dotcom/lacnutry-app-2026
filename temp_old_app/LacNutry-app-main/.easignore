@@ -1,0 +1,39 @@
+# EAS Build - Arquivos a ignorar
+
+# Android Emulator
+.android/
+*.avd/
+android/metrics/
+/android/.gradle
+
+# Windows System Files
+AppData/
+INetCache/
+User Data/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Build artifacts
+build/
+dist/
+*.apk
+*.aab
+*.ipa
+
+# Git
+.git/
+.gitignore
+
+# Docs/Examples (não necessários no build)
+BILLING_INTEGRATION_EXAMPLE.tsx
+SETUP_ANDROID_EMULATOR.md
+GOOGLE_PLAY_BILLING_SETUP.md
+
+
