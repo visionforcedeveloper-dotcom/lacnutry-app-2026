@@ -111,11 +111,7 @@ module.exports = {
       router: {
         origin: 'https://rork.com/',
       },
-      eas: {
-        projectId: '090485bb-1594-42b5-8550-35d58001b7ca',
-      },
     },
-    owner: 'visionforce3',
   },
 };
 
