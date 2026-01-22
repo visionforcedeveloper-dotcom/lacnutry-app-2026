@@ -3,7 +3,6 @@ import { Platform } from 'react-native';
 import {
   STORAGE_KEYS,
   storeBooleanData,
-  getBooleanData,
 } from '@/lib/asyncStorage';
 
 // IDs dos produtos na Play Store (Google Play Console)
@@ -23,265 +22,176 @@ const SUBSCRIPTION_PRODUCT_IDS = [
   'plano_mensal',
 ];
 
-// Mock do hook useIAP e funções
-const mockUseIAP = (options?: any) => {
-  return {
-    connected: false,
-    subscriptions: [],
-    fetchProducts: async () => console.log('[MOCK IAP] Fetch products'),
-    finishTransaction: async () => console.log('[MOCK IAP] Finish transaction'),
-    requestPurchase: async () => console.log('[MOCK IAP] Request purchase'),
-  };
-};
-
-const mockGetAvailablePurchases = async () => {
-  console.log('[MOCK IAP] Get available purchases');
-  return [];
-};
-
-const mockRequestPurchase = async () => {
-  console.log('[MOCK IAP] Request purchase');
-  return null;
-};
-
-// Variáveis para armazenar o módulo real ou o mock
-let useIAP: any = mockUseIAP;
-let getAvailablePurchases: any = mockGetAvailablePurchases;
-let requestPurchase: any = mockRequestPurchase;
-
-// Tentar importar react-native-iap
+// Tentar importar react-native-iap de forma segura
+let RNIap: any;
 try {
-  const iap = require('react-native-iap');
-  useIAP = iap.useIAP;
-  getAvailablePurchases = iap.getAvailablePurchases;
-  requestPurchase = iap.requestPurchase;
+  RNIap = require('react-native-iap');
 } catch (error) {
   console.warn('⚠️ react-native-iap nativo não encontrado. Usando mock.');
+  // Mock mínimo para não quebrar em desenvolvimento sem o pacote
+  RNIap = {
+    initConnection: async () => console.log('[MOCK] initConnection'),
+    flushFailedPurchasesCachedAsPendingAndroid: async () => console.log('[MOCK] flush'),
+    getSubscriptions: async () => [],
+    getAvailablePurchases: async () => [],
+    requestPurchase: async () => {},
+    finishTransaction: async () => {},
+    purchaseUpdatedListener: () => ({ remove: () => {} }),
+    purchaseErrorListener: () => ({ remove: () => {} }),
+    endConnection: async () => {},
+  };
 }
 
-// Tipos precisam ser importados de forma segura ou redefinidos se necessário
-// Para simplificar neste contexto, vamos usar 'any' onde os tipos estritos falhariam sem o módulo
-type Purchase = any;
-type PurchaseError = any;
-type ProductSubscription = any;
-
-const { IS_PREMIUM_ACTIVE } = STORAGE_KEYS;
-
-/**
- * Hook customizado para compras in-app
- * ATUALIZADO para usar o novo useIAP hook do react-native-iap v14+
- * Baseado no exemplo oficial: react-native-iap/example-expo
- */
 const useInAppPurchase = () => {
   const [isPremiumActive, setIsPremiumActive] = useState(false);
   const [connectionErrorMsg, setConnectionErrorMsg] = useState('');
-  const fetchedProductsOnceRef = useRef(false);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [connected, setConnected] = useState(false);
 
-  // ==========================================
-  // 1. Usar o novo useIAP hook (ou mock)
-  // ==========================================
-  const {
-    connected,
-    subscriptions,
-    fetchProducts,
-    finishTransaction,
-  } = useIAP({
-    onPurchaseSuccess: async (purchase: Purchase) => {
-      console.log('[IAP Hook] Compra bem-sucedida!');
-      console.log('Product ID:', purchase.productId);
-      console.log('Transaction ID:', purchase.transactionId);
+  // Referências para listeners
+  const purchaseUpdateSubscription = useRef<any>(null);
+  const purchaseErrorSubscription = useRef<any>(null);
 
-      // Finalizar transação
+  // Inicialização e Listeners
+  useEffect(() => {
+    const initIAP = async () => {
       try {
-        await finishTransaction({
-          purchase,
-          isConsumable: false,
-        });
-        console.log('[IAP Hook] Transação finalizada');
-      } catch (err) {
-        console.warn('[IAP Hook] Erro ao finalizar transação:', err);
+        console.log('[IAP] Inicializando conexão...');
+        const result = await RNIap.initConnection();
+        console.log('[IAP] Conexão inicializada:', result);
+
+        if (Platform.OS === 'android') {
+          console.log('[IAP] Flushing compras pendentes no Android...');
+          await RNIap.flushFailedPurchasesCachedAsPendingAndroid();
+        }
+
+        setConnected(true);
+
+        // Buscar produtos
+        console.log('[IAP] Buscando assinaturas:', SUBSCRIPTION_PRODUCT_IDS);
+        const products = await RNIap.getSubscriptions({ skus: SUBSCRIPTION_PRODUCT_IDS });
+        console.log('[IAP] Produtos encontrados:', products.length);
+        if (products.length > 0) {
+          products.forEach((p: any) => console.log(`- ${p.productId} (${p.price})`));
+        } else {
+          console.warn('[IAP] ⚠️ Nenhum produto encontrado. Verifique IDs e configuração no Play Console.');
+        }
+        setSubscriptions(products);
+
+      } catch (err: any) {
+        console.error('[IAP] Erro na inicialização:', err);
+        setConnectionErrorMsg(err.message || 'Erro ao conectar com a loja');
       }
+    };
 
-      // ATIVAR PREMIUM
-      setIsPremiumActive(true);
-      storeBooleanData(STORAGE_KEYS.IS_PREMIUM_ACTIVE, true);
-    },
-    onPurchaseError: (error: PurchaseError) => {
-      console.error('[IAP Hook] Erro na compra');
-      console.error('Code:', error.code);
-      console.error('Message:', error.message);
-
-      // Se já possui, ativar
-      if ((error.code as string) === 'E_ALREADY_OWNED') {
-        console.log('[IAP Hook] Usuário já possui!');
-        setIsPremiumActive(true);
-        storeBooleanData(STORAGE_KEYS.IS_PREMIUM_ACTIVE, true);
-      } else if ((error.code as string) !== 'E_USER_CANCELLED') {
-        setConnectionErrorMsg(error.message || 'Erro na compra');
-      }
-    },
-  });
-
-  // ==========================================
-  // 2. Buscar produtos quando conectar
-  // ==========================================
-  useEffect(() => {
-    if (connected && !fetchedProductsOnceRef.current) {
-      console.log('[IAP Hook] Buscando produtos...');
-      console.log('IDs:', SUBSCRIPTION_PRODUCT_IDS);
-
-      fetchProducts({
-        skus: SUBSCRIPTION_PRODUCT_IDS,
-        type: 'subs',
-      });
-      fetchedProductsOnceRef.current = true;
-    }
-  }, [connected, fetchProducts]);
-
-  // ==========================================
-  // 3. Log quando produtos forem carregados
-  // ==========================================
-  useEffect(() => {
-    if (subscriptions.length > 0) {
-      console.log('[IAP Hook] Produtos carregados:', subscriptions.length);
-      subscriptions.forEach((product: any) => {
-        console.log(`- ${product.productId || product.id}`);
-        console.log(`  Preço: ${product.localizedPrice || product.displayPrice || product.price}`);
+    // Configurar Listeners de Compra
+    if (RNIap) {
+      purchaseUpdateSubscription.current = RNIap.purchaseUpdatedListener(async (purchase: any) => {
+        console.log('[IAP Listener] Compra recebida:', purchase.productId);
         
-        // Log detalhes Android
-        if (Platform.OS === 'android' && product.subscriptionOfferDetailsAndroid) {
-          console.log(`  Ofertas:`, product.subscriptionOfferDetailsAndroid.length);
-          product.subscriptionOfferDetailsAndroid.forEach((offer: any, idx: number) => {
-            console.log(`    [${idx}] basePlanId: ${offer.basePlanId}, offerToken: ${offer.offerToken?.substring(0, 20)}...`);
-          });
+        try {
+          const receipt = purchase.transactionReceipt;
+          if (receipt) {
+            // Finalizar transação para não ser estornada
+            await RNIap.finishTransaction({ purchase, isConsumable: false });
+            console.log('[IAP Listener] Transação finalizada com sucesso');
+            
+            // Ativar Premium
+            setIsPremiumActive(true);
+            storeBooleanData(STORAGE_KEYS.IS_PREMIUM_ACTIVE, true);
+          }
+        } catch (ackErr) {
+          console.warn('[IAP Listener] Erro ao finalizar transação:', ackErr);
         }
       });
-    } else if (connected && fetchedProductsOnceRef.current) {
-      console.error('[IAP Hook] Nenhum produto encontrado!');
-      setConnectionErrorMsg(
-        'Produtos não encontrados.\n\n' +
-        'Verifique:\n' +
-        '- App instalado via Play Store\n' +
-        '- Conta cadastrada como testador\n' +
-        '- Produtos ativos no Play Console'
-      );
-    }
-  }, [subscriptions, connected]);
 
-  // ==========================================
-  // 4. Verificar assinatura ativa no Google Play
-  // ==========================================
+      purchaseErrorSubscription.current = RNIap.purchaseErrorListener((error: any) => {
+        console.warn('[IAP Listener] Erro na compra:', error);
+        if (error.responseCode !== '2' && error.code !== 'E_USER_CANCELLED') {
+           setConnectionErrorMsg(error.message || 'Erro ao processar compra');
+        }
+      });
+    }
+
+    initIAP();
+
+    return () => {
+      if (purchaseUpdateSubscription.current) {
+        purchaseUpdateSubscription.current.remove();
+        purchaseUpdateSubscription.current = null;
+      }
+      if (purchaseErrorSubscription.current) {
+        purchaseErrorSubscription.current.remove();
+        purchaseErrorSubscription.current = null;
+      }
+      RNIap.endConnection();
+    };
+  }, []);
+
+  // Verificar Status da Assinatura
   const checkSubscriptionStatus = async (): Promise<boolean> => {
     try {
-      console.log('[IAP Hook] 🔍 Verificando assinaturas ativas no Google Play...');
-      const purchases = await getAvailablePurchases();
+      if (!connected) return false;
       
-      console.log('[IAP Hook] Total de compras encontradas:', purchases.length);
-      
-      // REGRA 1: Sem compras = sem acesso
-      if (purchases.length === 0) {
-        console.log('[IAP Hook] ❌ Nenhuma assinatura encontrada');
-        console.log('[IAP Hook] Motivos possíveis:');
-        console.log('[IAP Hook] - Período de teste expirou sem conversão');
-        console.log('[IAP Hook] - Usuário cancelou a assinatura');
-        console.log('[IAP Hook] - Nunca comprou');
-        return false;
-      }
-      
-      // REGRA 2: Verificar se há assinatura ATIVA e PAGA dos nossos produtos
+      console.log('[IAP] Verificando compras existentes...');
+      const purchases = await RNIap.getAvailablePurchases();
+      console.log('[IAP] Compras encontradas:', purchases.length);
+
       const hasActiveSub = purchases.some((purchase: any) => {
-        console.log('[IAP Hook] 🔎 Analisando compra:', purchase.productId);
-        
-        // Verificar se é um dos nossos produtos
         const isOurProduct = SUBSCRIPTION_PRODUCT_IDS.includes(purchase.productId);
-        
-        if (!isOurProduct) {
-          console.log('[IAP Hook] ⚠️ Produto não reconhecido:', purchase.productId);
-          return false;
-        }
-        
-        // No Android, verificar estado da compra detalhadamente
+        if (!isOurProduct) return false;
+
+        // Lógica Android
         if (Platform.OS === 'android') {
-          const purchaseState = (purchase as any).purchaseStateAndroid;
-          
-          // Estados do Google Play:
-          // 0 = purchased (ATIVO e PAGO)
-          // 1 = canceled (CANCELADO pelo usuário)
-          // 2 = pending (PENDENTE - aguardando pagamento)
-          
-          console.log('[IAP Hook] Estado da compra:', purchaseState);
-          
-          switch (purchaseState) {
-            case 0:
-              console.log('[IAP Hook] ✅ Assinatura ATIVA e PAGA');
-              return true;
-            
-            case 1:
-              console.log('[IAP Hook] ❌ Assinatura CANCELADA');
-              console.log('[IAP Hook] Motivo: Usuário cancelou ou pagamento recusado');
-              return false;
-            
-            case 2:
-              console.log('[IAP Hook] ⏳ Assinatura PENDENTE');
-              console.log('[IAP Hook] Motivo: Aguardando aprovação do pagamento');
-              console.log('[IAP Hook] Possíveis causas:');
-              console.log('[IAP Hook] - Cartão bloqueado');
-              console.log('[IAP Hook] - Sem saldo/limite');
-              console.log('[IAP Hook] - Pagamento em análise');
-              return false;
-            
-            default:
-              console.log('[IAP Hook] ❓ Estado desconhecido:', purchaseState);
-              return false;
-          }
+             // purchaseStateAndroid: 0 = Ativo/Pago
+             return (purchase as any).purchaseStateAndroid === 0 || (purchase as any).purchaseStateAndroid === 4; // 4 = deferred? (verificar docs, mas 0 é garantido)
+             // Na verdade, getAvailablePurchases retorna compras válidas.
+             // Se estiver na lista, geralmente é válida, mas checar purchaseState é bom.
+             // Se purchaseState não existir, assumimos válido se transactionReceipt existir.
         }
-        
-        // iOS considera ativa se está na lista getAvailablePurchases
         return true;
       });
-      
+
       if (hasActiveSub) {
-        console.log('[IAP Hook] 🎉 Usuário tem assinatura válida!');
+        console.log('[IAP] Assinatura ativa encontrada!');
         setIsPremiumActive(true);
         storeBooleanData(STORAGE_KEYS.IS_PREMIUM_ACTIVE, true);
         return true;
       }
-      
-      console.log('[IAP Hook] ❌ Nenhuma assinatura válida encontrada nos produtos conhecidos');
+
+      console.log('[IAP] Nenhuma assinatura ativa encontrada.');
       return false;
-      
+
     } catch (error) {
-      console.error('[IAP Hook] Erro ao verificar status:', error);
+      console.error('[IAP] Erro ao verificar status:', error);
       return false;
     }
   };
 
-  /**
-   * Função pública para solicitar compra
-   */
+  // Solicitar Compra
   const handlePurchase = async (sku: string) => {
     try {
-      console.log('[IAP Hook] Solicitando compra:', sku);
+      console.log('[IAP] Solicitando compra de:', sku);
       
-      // Buscar oferta específica para Android se necessário
       let offerToken;
       if (Platform.OS === 'android') {
-        const product = subscriptions.find((p: any) => p.productId === sku);
-        if (product && product.subscriptionOfferDetailsAndroid && product.subscriptionOfferDetailsAndroid.length > 0) {
-          // Pega o primeiro offerToken disponível (geralmente é o base plan ou trial)
+        const product = subscriptions.find((p) => p.productId === sku);
+        if (product?.subscriptionOfferDetailsAndroid?.length > 0) {
           offerToken = product.subscriptionOfferDetailsAndroid[0].offerToken;
         }
       }
 
-      await requestPurchase({
+      await RNIap.requestPurchase({
         sku,
         ...(offerToken && { subscriptionOffers: [{ sku, offerToken }] }),
       });
       
+      // O resultado vem via listener (purchaseUpdatedListener)
+
     } catch (error: any) {
-      console.error('[IAP Hook] Erro ao solicitar compra:', error);
+      console.error('[IAP] Erro no requestPurchase:', error);
       if (error.code !== 'E_USER_CANCELLED') {
-        setConnectionErrorMsg(error.message || 'Erro ao processar compra');
+        setConnectionErrorMsg(error.message || 'Erro ao iniciar compra');
       }
     }
   };

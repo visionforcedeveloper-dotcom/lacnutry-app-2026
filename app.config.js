@@ -83,6 +83,12 @@ module.exports = {
           enableBackgroundRemoteNotifications: false,
         },
       ],
+      [
+        'react-native-iap',
+        {
+          paymentProvider: 'Play Store',
+        },
+      ],
       // 🔥 PLUGIN CUSTOMIZADO PARA GARANTIR BILLING PERMISSION
       './plugins/withAndroidBillingPermission.js',
       // 🎯 FACEBOOK ADS SDK - Temporariamente desabilitado para build
