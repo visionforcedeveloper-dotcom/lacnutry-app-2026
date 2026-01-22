@@ -7,7 +7,11 @@ import {
 
 // IDs dos produtos na Play Store (Google Play Console)
 const SUBSCRIPTION_PRODUCT_IDS = [
-  // IDs principais (novos)
+  // IDs sugeridos pelo usuário (alta prioridade)
+  'com.lacnutry.premium_monthly',
+  'com.lacnutry.premium_yearly',
+
+  // IDs principais (antigos)
   'com.lactosefree.monthly',
   'com.lactosefree.annual',
   
@@ -22,9 +26,15 @@ const SUBSCRIPTION_PRODUCT_IDS = [
   'plano_mensal',
 ];
 
+import Constants from 'expo-constants';
+
 // Tentar importar react-native-iap de forma segura
 let RNIap: any;
 try {
+  // Se estiver no Expo Go, forçar erro para usar mock
+  if (Constants.appOwnership === 'expo') {
+    throw new Error('Expo Go detected');
+  }
   RNIap = require('react-native-iap');
 } catch (error) {
   console.warn('⚠️ react-native-iap nativo não encontrado. Usando mock.');
