@@ -62,39 +62,48 @@ const useInAppPurchase = () => {
   const purchaseUpdateSubscription = useRef<any>(null);
   const purchaseErrorSubscription = useRef<any>(null);
 
-  // Inicialização e Listeners
-  useEffect(() => {
-    const initIAP = async () => {
-      try {
-        console.log('[IAP] Inicializando conexão...');
-        const result = await RNIap.initConnection();
-        console.log('[IAP] Conexão inicializada:', result);
-
-        if (Platform.OS === 'android') {
-          console.log('[IAP] Flushing compras pendentes no Android...');
-          await RNIap.flushFailedPurchasesCachedAsPendingAndroid();
-        }
-
-        setConnected(true);
-
-        // Buscar produtos
-        console.log('[IAP] Buscando assinaturas:', SUBSCRIPTION_PRODUCT_IDS);
-        const products = await RNIap.getSubscriptions({ skus: SUBSCRIPTION_PRODUCT_IDS });
-        console.log('[IAP] Produtos encontrados:', products.length);
-        if (products.length > 0) {
-          products.forEach((p: any) => console.log(`- ${p.productId} (${p.price})`));
-        } else {
-          console.warn('[IAP] ⚠️ Nenhum produto encontrado. Verifique IDs e configuração no Play Console.');
-        }
-        setSubscriptions(products);
-
-      } catch (err: any) {
-        console.error('[IAP] Erro na inicialização:', err);
-        setConnectionErrorMsg(err.message || 'Erro ao conectar com a loja');
+  // Inicialização manual e segura (chamada apenas no Paywall)
+  const initIAPSafe = async () => {
+    try {
+      if (connected) {
+        console.log('[IAP] Já conectado, ignorando inicialização.');
+        return;
       }
-    };
 
-    // Configurar Listeners de Compra
+      console.log('[IAP] Inicializando conexão...');
+      const result = await RNIap.initConnection();
+      console.log('[IAP] Conexão inicializada:', result);
+
+      if (Platform.OS === 'android') {
+        console.log('[IAP] Flushing compras pendentes no Android...');
+        await RNIap.flushFailedPurchasesCachedAsPendingAndroid();
+      }
+
+      setConnected(true);
+
+      // Buscar produtos
+      console.log('[IAP] Buscando assinaturas:', SUBSCRIPTION_PRODUCT_IDS);
+      const products = await RNIap.getSubscriptions({ skus: SUBSCRIPTION_PRODUCT_IDS });
+      console.log('[IAP] Produtos encontrados:', products.length);
+      if (products.length > 0) {
+        products.forEach((p: any) => console.log(`- ${p.productId} (${p.price})`));
+      } else {
+        console.warn('[IAP] ⚠️ Nenhum produto encontrado. Verifique IDs e configuração no Play Console.');
+      }
+      setSubscriptions(products);
+
+    } catch (err: any) {
+      console.error('[IAP] Erro na inicialização:', err);
+      setConnectionErrorMsg(err.message || 'Erro ao conectar com a loja');
+    }
+  };
+
+  // Configurar Listeners apenas quando conectado
+  useEffect(() => {
+    if (!connected) return;
+
+    console.log('[IAP] Configurando listeners...');
+    
     if (RNIap) {
       purchaseUpdateSubscription.current = RNIap.purchaseUpdatedListener(async (purchase: any) => {
         console.log('[IAP Listener] Compra recebida:', purchase.productId);
@@ -123,7 +132,7 @@ const useInAppPurchase = () => {
       });
     }
 
-    initIAP();
+    // REMOVIDO: initIAP(); // Inicialização automática removida para evitar crash global
 
     return () => {
       if (purchaseUpdateSubscription.current) {
@@ -208,11 +217,11 @@ const useInAppPurchase = () => {
 
   return {
     isPremiumActive,
-    subscriptions,
+    products: subscriptions, // Alias para compatibilidade
     connectionErrorMsg,
-    checkSubscriptionStatus,
-    handlePurchase,
+    purchaseProduct: handlePurchase, // Alias para compatibilidade
     connected,
+    initIAPSafe, // Nova função para chamar no Paywall
   };
 };
 

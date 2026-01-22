@@ -54,6 +54,7 @@ function getInAppPurchaseHook() {
       purchaseProduct: async () => {},
       connected: false,
       products: [],
+      initIAPSafe: async () => console.log('[MOCK] initIAPSafe called'),
     });
   }
 }
@@ -139,6 +140,7 @@ export default function PaywallScreen() {
       purchaseProduct: async () => {},
       connected: false,
       products: [],
+      initIAPSafe: async () => {},
     };
   }
   
@@ -148,8 +150,29 @@ export default function PaywallScreen() {
     purchaseProduct,
     connected,
     products,
+    initIAPSafe,
   } = iapHook;
   
+  // Inicialização SEGURA do IAP (apenas nesta tela)
+  useEffect(() => {
+    let mounted = true;
+
+    const init = async () => {
+      if (initIAPSafe) {
+        await initIAPSafe();
+      }
+    };
+    
+    init();
+
+    return () => {
+      mounted = false;
+      // O cleanup de conexão já é feito no unmount do hook useInAppPurchase
+      // Mas se quisermos garantir, o hook poderia expor endConnection também.
+      // Por enquanto, confiar no cleanup do hook.
+    };
+  }, []);
+
   // Estados da UI
   const [selectedPlan, setSelectedPlan] = useState<string>("annual");
   const [isProcessing, setIsProcessing] = useState(false);
