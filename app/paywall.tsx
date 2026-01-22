@@ -78,6 +78,7 @@ interface PricingPlan {
 // O app vai usar o PRIMEIRO ID que for encontrado
 const PRODUCT_IDS = {
   MONTHLY: [
+    'com.lacnutry.premium_monthly',
     'com.lactosefree.monthly',
     'lacnutry_mensal',
     'lacnutry_plano_mensal_27',
@@ -85,6 +86,7 @@ const PRODUCT_IDS = {
     'plano_mensal',
   ],
   YEARLY: [
+    'com.lacnutry.premium_yearly',
     'com.lactosefree.annual',
     'lacnutry_anual',
     'lacnutry_annual',
@@ -297,7 +299,7 @@ export default function PaywallScreen() {
           'Verifique:\n' +
           '1. App instalado via Play Store\n' +
           '2. Produtos ativos no Play Console\n' +
-          '3. IDs corretos: com.lactosefree.monthly e com.lactosefree.annual'
+          '3. IDs corretos: com.lacnutry.premium_monthly, com.lacnutry.premium_yearly, etc.'
         );
         return;
       }
