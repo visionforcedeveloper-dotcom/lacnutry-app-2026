@@ -36,4 +36,6 @@ BILLING_INTEGRATION_EXAMPLE.tsx
 SETUP_ANDROID_EMULATOR.md
 GOOGLE_PLAY_BILLING_SETUP.md
 
-
+# Node Modules & Large Files
+node_modules/
+LacNutry-app-main (1).zip
