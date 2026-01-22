@@ -209,4 +209,4 @@ dependencies {
 }
 
 // Firebase - deve ser a última linha do arquivo
-apply plugin: 'com.google.gms.google-services'
+// apply plugin: 'com.google.gms.google-services'
