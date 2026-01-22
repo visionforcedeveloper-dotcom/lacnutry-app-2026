@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
   <uses-permission android:name="android.permission.CAMERA"/>
   <uses-permission android:name="android.permission.INTERNET"/>
   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
@@ -9,9 +10,6 @@
   <uses-permission android:name="android.permission.VIBRATE"/>
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
   <uses-permission android:name="com.android.vending.BILLING"/>
-  <!-- Permissão obrigatória para Advertising ID no Android 13+ (API 33+) -->
-  <!-- Necessária para Firebase Analytics e outros serviços de análise -->
-  <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
   <queries>
     <intent>
       <action android:name="android.intent.action.VIEW"/>
@@ -36,6 +34,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="rork-app"/>
+        <data android:scheme="exp+lacnutry-app"/>
       </intent-filter>
     </activity>
   </application>
