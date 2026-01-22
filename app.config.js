@@ -111,6 +111,9 @@ module.exports = {
       router: {
         origin: 'https://rork.com/',
       },
+      eas: {
+        projectId: 'c40256da-9cb4-4ea2-8e14-364a07c05dd2',
+      },
     },
   },
 };
