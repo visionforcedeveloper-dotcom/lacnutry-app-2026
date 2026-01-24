@@ -9,7 +9,7 @@ module.exports = {
   expo: {
     name: IS_DEV ? 'LacNutry (DEV)' : 'LacNutry',
     slug: 'lacnutry-app',
-    version: IS_DEV ? '3.9.0' : '3.60.3',
+    version: IS_DEV ? '3.9.0' : '3.60.7',
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'rork-app',
@@ -30,7 +30,7 @@ module.exports = {
       },
     },
     android: {
-      versionCode: 94,
+      versionCode: 96,
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',
         backgroundColor: '#ffffff',
@@ -112,7 +112,7 @@ module.exports = {
         origin: 'https://rork.com/',
       },
       eas: {
-        projectId: 'c40256da-9cb4-4ea2-8e14-364a07c05dd2',
+        // projectId removido para permitir vincular a uma nova conta
       },
     },
   },

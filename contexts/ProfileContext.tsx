@@ -312,23 +312,35 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
   const completeQuiz = useCallback(async (name: string, email: string) => {
     try {
       await Promise.all([
-        Storage.setItem(STORAGE_KEYS.FIRST_ACCESS, 'false'),
-        Storage.setItem(STORAGE_KEYS.QUIZ_COMPLETED, 'true'),
         Storage.removeItem(STORAGE_KEYS.QUIZ_PROGRESS),
       ]);
 
       const updatedProfile = { ...profile, name, email };
       await updateProfile(updatedProfile);
 
-      setIsFirstAccess(false);
-      setHasCompletedQuiz(true);
       setQuizProgress(null);
 
-      console.log('[Profile] Quiz completado e perfil atualizado');
+      console.log('[Profile] Quiz completado e perfil atualizado (Aguardando onboarding)');
     } catch (error) {
       console.error('[Profile] Erro ao completar quiz:', error);
     }
   }, [profile, updateProfile]);
+
+  const completeOnboarding = useCallback(async () => {
+    try {
+      await Promise.all([
+        Storage.setItem(STORAGE_KEYS.FIRST_ACCESS, 'false'),
+        Storage.setItem(STORAGE_KEYS.QUIZ_COMPLETED, 'true'),
+      ]);
+
+      setIsFirstAccess(false);
+      setHasCompletedQuiz(true);
+      
+      console.log('[Profile] Onboarding completado com sucesso');
+    } catch (error) {
+      console.error('[Profile] Erro ao completar onboarding:', error);
+    }
+  }, []);
 
   const setPremiumStatus = useCallback(async (status: boolean) => {
     try {
@@ -370,6 +382,7 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
     saveQuizProgress,
     clearQuizProgress,
     completeQuiz,
+    completeOnboarding,
     isPremium,
     setPremiumStatus,
     completeSubscription,

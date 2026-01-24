@@ -1,6 +1,6 @@
 import { searchProductByBarcode } from "./openfoodfacts";
 
-const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || "";
+const GEMINI_API_KEYS = (process.env.EXPO_PUBLIC_GEMINI_API_KEY || "").split(",").map(k => k.trim()).filter(k => k.length > 0);
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
 // Modelos disponíveis
@@ -38,12 +38,14 @@ export interface GeminiChatResponse {
 }
 
 function getApiKey(): string {
-  if (GEMINI_API_KEY && GEMINI_API_KEY.trim().length > 0) {
-    return GEMINI_API_KEY;
+  if (GEMINI_API_KEYS.length > 0) {
+    // Retorna uma chave aleatória para distribuir a carga (load balancing simples)
+    const randomIndex = Math.floor(Math.random() * GEMINI_API_KEYS.length);
+    return GEMINI_API_KEYS[randomIndex];
   }
 
   console.warn(
-    "[Gemini] Chave da API não configurada. Defina EXPO_PUBLIC_GEMINI_API_KEY ou GEMINI_API_KEY no seu .env.local."
+    "[Gemini] Chave da API não configurada. Defina EXPO_PUBLIC_GEMINI_API_KEY no seu .env (pode separar múltiplas por vírgula)."
   );
 
   return "";
@@ -76,7 +78,60 @@ function getFallbackAnalysis(additionalInfo?: string): GeminiVisionResponse {
 }
 
 /**
- * Analisa uma imagem de produto alimentício usando Gemini Vision
+ * Chama a Cloud Vision API para extração robusta de OCR e Labels
+ */
+async function callCloudVisionAPI(base64Image: string, apiKey: string): Promise<CloudVisionResult> {
+  try {
+    console.log("[Cloud Vision] Iniciando chamada à API de Visão...");
+    const response = await fetch(`${CLOUD_VISION_API_URL}?key=${apiKey}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requests: [
+          {
+            image: {
+              content: base64Image,
+            },
+            features: [
+              { type: "TEXT_DETECTION" },
+              { type: "LABEL_DETECTION" },
+              { type: "LOGO_DETECTION" },
+              { type: "WEB_DETECTION" },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn("[Cloud Vision] Falha na chamada:", response.status);
+      return {};
+    }
+
+    const data = await response.json();
+    const result = data.responses?.[0];
+
+    if (!result) return {};
+
+    const text = result.fullTextAnnotation?.text;
+    const labels = result.labelAnnotations?.map((l: any) => l.description);
+    const logos = result.logoAnnotations?.map((l: any) => l.description);
+    const webEntities = result.webDetection?.webEntities?.map((w: any) => w.description);
+
+    console.log("[Cloud Vision] Sucesso! Texto detectado:", text ? "Sim" : "Não");
+    console.log("[Cloud Vision] Labels:", labels?.slice(0, 3));
+
+    return { text, labels, logos, webEntities };
+  } catch (error) {
+    console.error("[Cloud Vision] Erro:", error);
+    return {};
+  }
+}
+
+/**
+ * Analisa uma imagem de produto alimentício usando Gemini Vision e Cloud Vision
  * Identifica presença de lactose e informações nutricionais
  */
 export async function analyzeProductImage(
@@ -108,20 +163,33 @@ export async function analyzeProductImage(
     }
     
     console.log("[Gemini] Tamanho da imagem base64:", imageData.length, "caracteres");
-    console.log("[Gemini] Iniciando chamada para API Gemini...");
+
+    // 1. Chamar Cloud Vision API em paralelo ou antes (vamos chamar antes para enriquecer o prompt)
+    // Isso atende ao pedido de "chamar cada api"
+    const cloudVisionResult = await callCloudVisionAPI(imageData, apiKey);
+    
+    console.log("[Gemini] Iniciando chamada para API Gemini (Generative Language)...");
 
     // Criar controller para timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
+    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 segundos timeout (aumentado para 2 APIs)
+
+    // Construir contexto do Cloud Vision
+    let visionContext = "";
+    if (cloudVisionResult.text) visionContext += `\n[OCR - TEXTO EXTRAÍDO DA EMBALAGEM]: ${cloudVisionResult.text}`;
+    if (cloudVisionResult.labels?.length) visionContext += `\n[DETECTADO POR VISÃO COMPUTACIONAL]: ${cloudVisionResult.labels.join(", ")}`;
+    if (cloudVisionResult.logos?.length) visionContext += `\n[MARCAS IDENTIFICADAS]: ${cloudVisionResult.logos.join(", ")}`;
+    if (cloudVisionResult.webEntities?.length) visionContext += `\n[ENTIDADES WEB RELACIONADAS]: ${cloudVisionResult.webEntities.join(", ")}`;
 
     const prompt = `Você é um especialista em análise de alimentos e nutrição, focado em identificar lactose e derivados do leite.
     
     CAPACIDADES DE VISÃO E ANÁLISE (ATIVAS):
-    - TEXT_DETECTION (OCR): Leia atentamente todos os textos, rótulos e listas de ingredientes visíveis.
-    - LABEL_DETECTION: Identifique com precisão que alimento ou produto é este.
-    - LOGO_DETECTION: Identifique marcas conhecidas para inferir ingredientes padrão.
-    - OBJECT_LOCALIZATION: Localize os principais componentes do prato/produto.
-    - BARCODE_DETECTION: Se houver código de barras, use os números para auxiliar na identificação.
+    - Uso integrado da Generative Language API (Gemini)
+    - Uso integrado da Cloud Vision API (OCR e Labels já extraídos abaixo)
+    - Uso integrado de conhecimentos do Vertex AI (Modelos de linguagem)
+
+    DADOS BRUTOS DA CLOUD VISION API (USE ISTO PARA MÁXIMA PRECISÃO):
+    ${visionContext}
 
     Analise esta imagem de produto alimentício ou prato de comida e forneça informações PRECISAS e DETALHADAS.
     

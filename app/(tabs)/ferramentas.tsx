@@ -28,17 +28,6 @@ export default function FerramentasScreen() {
       isPremium: true,
     },
     {
-      id: "quiz",
-      title: "Quiz Personalizado",
-      description:
-        "Descubra seu perfil alimentar respondendo algumas perguntas rápidas.",
-      icon: Award,
-      color: "#9B59B6",
-      bgColor: "#F3E5F5",
-      route: "/quiz",
-      isPremium: false,
-    },
-    {
       id: "reaction-alerts",
       title: "Alertas de Reação",
       description:

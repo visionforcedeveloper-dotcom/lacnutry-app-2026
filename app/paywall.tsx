@@ -79,19 +79,22 @@ interface PricingPlan {
 // O app vai usar o PRIMEIRO ID que for encontrado
 const PRODUCT_IDS = {
   MONTHLY: [
-    'com.lacnutry.premium_monthly',
+    'lacnutry_27_mensal',
+    'assinatura_27_mensal',
     'com.lactosefree.monthly',
-    'lacnutry_mensal',
     'lacnutry_plano_mensal_27',
+    'lacnutry_premium_mensal',
     'lacnutry_premium_monthly',
     'plano_mensal',
+    'premium_monthly',
   ],
   YEARLY: [
-    'com.lacnutry.premium_yearly',
+    'lacnutry_97_anual',
+    'assinatura_97_anual',
     'com.lactosefree.annual',
-    'lacnutry_anual',
-    'lacnutry_annual',
+    'lacnutry_plano_anual_97',
     'lacnutry_premium_anual',
+    'lacnutry_premium_yearly',
     'premium_anual',
   ],
 };
@@ -640,7 +643,12 @@ export default function PaywallScreen() {
         </View>
         
         <View style={styles.footer}>
-          <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
+          <TouchableOpacity onPress={async () => {
+            if (completeOnboarding) {
+              await completeOnboarding();
+            }
+            router.replace("/(tabs)");
+          }}>
             <Text style={styles.skipButton}>Pular por enquanto</Text>
           </TouchableOpacity>
           <Text style={styles.disclaimer}>

@@ -34,7 +34,6 @@
       },
       "cache": {
         "key": "lacnutry-v3.45",
-        "cacheDefaultPaths": true,
         "paths": [
           "node_modules"
         ]

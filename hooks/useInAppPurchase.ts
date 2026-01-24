@@ -7,23 +7,24 @@ import {
 
 // IDs dos produtos na Play Store (Google Play Console)
 const SUBSCRIPTION_PRODUCT_IDS = [
-  // IDs sugeridos pelo usuário (alta prioridade)
-  'com.lacnutry.premium_monthly',
-  'com.lacnutry.premium_yearly',
+  // IDs ativos (prioridade máxima)
+  'lacnutry_27_mensal',
+  'lacnutry_97_anual',
 
-  // IDs principais (antigos)
-  'com.lactosefree.monthly',
+  // IDs secundários/legado
+  'assinatura_27_mensal',
+  'assinatura_97_anual',
   'com.lactosefree.annual',
-  
-  // IDs alternativos (testar todos)
-  'lacnutry_mensal',
-  'lacnutry_anual',
-  'lacnutry_annual',
+  'com.lactosefree.monthly',
+  'lacnutry_plano_anual_97',
   'lacnutry_plano_mensal_27',
   'lacnutry_premium_anual',
+  'lacnutry_premium_mensal',
   'lacnutry_premium_monthly',
-  'premium_anual',
+  'lacnutry_premium_yearly',
   'plano_mensal',
+  'premium_anual',
+  'premium_monthly',
 ];
 
 import Constants from 'expo-constants';

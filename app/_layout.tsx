@@ -1,63 +1,48 @@
-import { Tabs } from "expo-router";
-import { Home, AlertCircle, ScanLine, Crown, User } from "lucide-react-native";
-import React from "react";
+import { Stack } from "expo-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { trpc, trpcClient } from "@/lib/trpc";
+import { ProfileProvider } from "@/contexts/ProfileContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
+import React, { useState } from "react";
+import { StatusBar } from "expo-status-bar";
+import { Platform } from "react-native";
 
-import Colors from "@/constants/colors";
+export default function RootLayout() {
+  const [queryClient] = useState(() => new QueryClient());
+  const [trpcClientInstance] = useState(() => trpcClient);
 
-export default function TabLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textSecondary,
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: Colors.white,
-          borderTopWidth: 1,
-          borderTopColor: Colors.border,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600" as const,
-          marginTop: 4,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Início",
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="receitas"
-        options={{
-          title: "Alertas",
-          tabBarIcon: ({ color, size }) => <AlertCircle color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="scanner"
-        options={{
-          title: "Scanner",
-          tabBarIcon: ({ color, size }) => <ScanLine color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="ferramentas"
-        options={{
-          title: "Mais",
-          tabBarIcon: ({ color, size }) => <Crown color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="perfil"
-        options={{
-          title: "Perfil",
-          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
-        }}
-      />
-    </Tabs>
+    <trpc.Provider client={trpcClientInstance} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <NotificationProvider>
+          <ProfileProvider>
+            <StatusBar style="dark" />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen 
+                name="paywall" 
+                options={{ 
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom'
+                }} 
+              />
+              <Stack.Screen 
+                name="welcome" 
+                options={{ 
+                  headerShown: false,
+                  gestureEnabled: false
+                }} 
+              />
+              <Stack.Screen 
+                name="quiz" 
+                options={{ 
+                  headerShown: false 
+                }} 
+              />
+            </Stack>
+          </ProfileProvider>
+        </NotificationProvider>
+      </QueryClientProvider>
+    </trpc.Provider>
   );
 }
