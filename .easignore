@@ -1,0 +1,77 @@
+# Arquivos temporários do sistema
+AppData/
+Temp/
+*.tmp
+*.log
+
+# Cache do npm
+npm-cache/
+.npm/
+
+# Arquivos do Chrome
+**/Chrome/**
+**/Safe Browsing/**
+**/Google/**
+**/Cache/**
+**/Cache_Data/**
+**/GrShaderCache/**
+
+# Arquivos do Kiro
+**/Kiro/**
+
+# Logs
+*.log
+logs/
+
+# Arquivos temporários do Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Arquivos temporários do macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node modules
+node_modules/
+
+# Build artifacts
+dist/
+build/
+
+# Environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Sistema Windows - Diretórios de usuário
+../../../AppData/
+../../../Temp/
+../../../*.tmp
+../../../Downloads/
+../../../Desktop/
+../../../Documents/
+../../../Pictures/
+../../../Videos/
+../../../Music/
+../../../OneDrive/
+../../../Contacts/
+../../../Favorites/
+../../../Links/
+../../../Searches/
+../../../Saved Games/
+../../../My project*/
+../../../NTUSER.*
+../../../ntuser.*
+../../../.android/
+../../../.gradle/
+../../../.config/
+../../../.local/
+../../../.cursor/
+../../../.expo/
+../../../.aws/
+../../../.vscode/
+../../../.kiro/
+../../../AndroidStudioProjects/
