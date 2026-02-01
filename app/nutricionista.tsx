@@ -11,7 +11,7 @@ import {
 import { Stack, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { User } from "lucide-react-native";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 import { useProfile } from "@/contexts/ProfileContext";
 
 export default function IntoleranceProfileScreen() {

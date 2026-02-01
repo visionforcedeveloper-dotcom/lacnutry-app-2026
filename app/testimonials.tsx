@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Star, TrendingUp, Heart, ChevronLeft } from "lucide-react-native";
 import { router } from "expo-router";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 
 interface Testimonial {
   id: number;

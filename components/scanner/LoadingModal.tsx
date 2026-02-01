@@ -7,7 +7,7 @@ import {
   Animated,
 } from "react-native";
 import { Sparkles } from "lucide-react-native";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 
 interface LoadingModalProps {
   visible: boolean;

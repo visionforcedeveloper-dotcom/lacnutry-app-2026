@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Camera, AlertCircle } from "lucide-react-native";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 
 export default function ScannerScreen() {
   const insets = useSafeAreaInsets();

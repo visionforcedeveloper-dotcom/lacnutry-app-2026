@@ -9,7 +9,7 @@ import {
 import { Stack, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Award, TrendingUp, Users, CheckCircle, Lock, Star, Shield } from "lucide-react-native";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 import { useProfile } from "@/contexts/ProfileContext";
 
 interface SafeProduct {

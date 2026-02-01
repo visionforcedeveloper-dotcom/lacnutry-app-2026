@@ -9,7 +9,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { User, AlertOctagon, Award, AlertCircle, ArrowRight, Lock } from "lucide-react-native";
 import { router } from "expo-router";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 import { useProfile } from "@/contexts/ProfileContext";
 
 export default function FerramentasScreen() {

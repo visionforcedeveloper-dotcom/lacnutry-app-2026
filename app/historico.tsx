@@ -10,7 +10,7 @@ import {
 import { Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Clock, AlertCircle, CheckCircle, Trash2 } from "lucide-react-native";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 import { useProfile } from "@/contexts/ProfileContext";
 
 export default function HistoricoScreen() {

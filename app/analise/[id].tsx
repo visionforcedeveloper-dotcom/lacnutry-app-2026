@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 import { useProfile } from "@/contexts/ProfileContext";
 import AnalysisResults from "@/components/scanner/AnalysisResults";
 

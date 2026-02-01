@@ -22,7 +22,7 @@ import {
   Users,
 } from "lucide-react-native";
 import { router } from "expo-router";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 import { useProfile } from "@/contexts/ProfileContext";
 import { trpc } from "@/lib/trpc";
 import Svg, { Circle, G } from 'react-native-svg';

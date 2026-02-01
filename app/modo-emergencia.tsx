@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'r
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlertOctagon, Phone, FileText, ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import Colors from '@/constants/colors';
+import Colors from '@/constants/Colors';
 
 export default function EmergencyModeScreen() {
   const insets = useSafeAreaInsets();

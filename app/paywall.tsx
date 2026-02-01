@@ -23,7 +23,7 @@ import {
   RefreshCw,
 } from "lucide-react-native";
 import { router } from "expo-router";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRevenueCat } from "@/hooks/useRevenueCat";
 import { PurchasesPackage } from 'react-native-purchases';

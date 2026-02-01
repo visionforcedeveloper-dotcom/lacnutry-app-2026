@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Plus, Calendar, AlertTriangle, Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import Colors from '@/constants/colors';
+import Colors from '@/constants/Colors';
 import { useProfile } from '@/contexts/ProfileContext';
 
 export default function ReactionAlertsScreen() {

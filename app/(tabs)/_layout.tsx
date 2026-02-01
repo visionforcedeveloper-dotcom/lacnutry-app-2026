@@ -2,7 +2,7 @@ import { Tabs } from "expo-router";
 import { Home, AlertCircle, ScanLine, Crown, User } from "lucide-react-native";
 import React from "react";
 
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 
 export default function TabLayout() {
   return (

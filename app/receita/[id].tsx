@@ -10,7 +10,7 @@ import {
 import { useLocalSearchParams, Stack, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowLeft, Clock, Users, ChefHat, CheckCircle2, Heart } from "lucide-react-native";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 import { recipes } from "@/mocks/recipes";
 import { useProfile } from "@/contexts/ProfileContext";
 

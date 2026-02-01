@@ -23,7 +23,7 @@ import {
   Activity,
 } from "lucide-react-native";
 import { router } from "expo-router";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 import { useProfile } from "@/contexts/ProfileContext";
 
 const dailyTips = [

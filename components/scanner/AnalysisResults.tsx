@@ -15,7 +15,7 @@ import {
   ListChecks,
   Camera,
 } from "lucide-react-native";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 import { GeminiVisionResponse } from "@/lib/gemini";
 import { useProfile } from "@/contexts/ProfileContext";
 

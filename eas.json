@@ -1,19 +1,12 @@
 {
   "cli": {
-    "version": ">= 13.2.0",
+    "version": ">= 5.4.0",
     "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug"
-      },
-      "ios": {
-        "buildConfiguration": "Debug"
-      }
+      "distribution": "internal"
     },
     "preview": {
       "distribution": "internal",
@@ -23,37 +16,15 @@
     },
     "production": {
       "android": {
-        "buildType": "app-bundle",
-        "credentialsSource": "local",
-        "node": "20.18.0"
-      },
-      "ios": {
-        "buildConfiguration": "Release"
+        "buildType": "app-bundle"
       },
       "env": {
         "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
-      },
-      "cache": {
-        "key": "lacnutry-v3.70.2",
-        "paths": [
-          "node_modules"
-        ]
       }
     }
   },
   "submit": {
-    "production": {
-      "android": {
-        "serviceAccountKeyPath": "./google-play-service-account.json",
-        "track": "internal",
-        "releaseStatus": "draft"
-      },
-      "ios": {
-        "appleId": "seu-email@exemplo.com",
-        "ascAppId": "1234567890",
-        "appleTeamId": "XXXXXXXXXX"
-      }
-    }
+    "production": {}
   }
 }
 

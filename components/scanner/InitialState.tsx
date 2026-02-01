@@ -7,7 +7,7 @@ import {
   TextInput,
 } from "react-native";
 import { Camera, Image as ImageIcon } from "lucide-react-native";
-import Colors from "@/constants/colors";
+import Colors from "@/constants/Colors";
 
 interface InitialStateProps {
   onStartCamera: () => void;
