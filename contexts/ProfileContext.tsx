@@ -406,6 +406,31 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
     await setPremiumStatus(false);
   }, [setPremiumStatus]);
 
+  const resetAllData = useCallback(async () => {
+    try {
+      console.log('[ProfileContext] 🔄 Resetando todos os dados...');
+      
+      // Limpar todos os dados do storage
+      await Promise.all([
+        Storage.removeItem(STORAGE_KEYS.FIRST_ACCESS),
+        Storage.removeItem(STORAGE_KEYS.QUIZ_COMPLETED),
+        Storage.removeItem(STORAGE_KEYS.QUIZ_PROGRESS),
+        Storage.removeItem(STORAGE_KEYS.SUBSCRIPTION),
+      ]);
+      
+      // Resetar estados
+      setIsFirstAccess(true);
+      setHasCompletedQuiz(false);
+      setHasSubscription(false);
+      setIsPremium(false);
+      setQuizProgress(null);
+      
+      console.log('[ProfileContext] ✅ Dados resetados com sucesso');
+    } catch (error) {
+      console.error('[ProfileContext] ❌ Erro ao resetar dados:', error);
+    }
+  }, []);
+
   return useMemo(() => ({
     profile,
     favorites,
@@ -432,6 +457,7 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
     setPremiumStatus,
     completeSubscription,
     cancelSubscription,
+    resetAllData,
   }), [
     profile,
     favorites,
@@ -457,5 +483,6 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
     setPremiumStatus,
     completeSubscription,
     cancelSubscription,
+    resetAllData,
   ]);
 });

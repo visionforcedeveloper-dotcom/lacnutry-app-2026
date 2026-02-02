@@ -71,7 +71,7 @@ const pricingPlans: PricingPlan[] = [
 
 export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
-  const { completeSubscription, hasSubscription, isPremium, setPremiumStatus } = useProfile();
+  const { completeSubscription, hasSubscription, isPremium, setPremiumStatus, completeOnboarding } = useProfile();
   
   // Hook do RevenueCat
   const {
@@ -171,7 +171,12 @@ export default function PaywallScreen() {
           [
             {
               text: 'OK',
-              onPress: () => router.replace("/(tabs)")
+              onPress: () => {
+                // Completar onboarding e ir para o app
+                completeOnboarding().then(() => {
+                  router.replace("/(tabs)");
+                });
+              }
             }
           ]
         );
@@ -210,7 +215,12 @@ export default function PaywallScreen() {
           [
             {
               text: 'OK',
-              onPress: () => router.replace("/(tabs)")
+              onPress: () => {
+                // Completar onboarding e ir para o app
+                completeOnboarding().then(() => {
+                  router.replace("/(tabs)");
+                });
+              }
             }
           ]
         );
@@ -506,7 +516,12 @@ export default function PaywallScreen() {
             <Text style={styles.restoreButton}>Restaurar Compras</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity onPress={() => router.replace("/(tabs)")}>
+          <TouchableOpacity onPress={() => {
+            // Completar onboarding mesmo pulando e ir para o app
+            completeOnboarding().then(() => {
+              router.replace("/(tabs)");
+            });
+          }}>
             <Text style={styles.skipButton}>Pular por enquanto</Text>
           </TouchableOpacity>
           

@@ -9,14 +9,6 @@ dist/
 web-build/
 expo-env.d.ts
 
-# Native
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
 # Metro
 .metro-health-check*
 
@@ -27,7 +19,6 @@ yarn-error.*
 
 # macOS
 .DS_Store
-*.pem
 
 # local env files
 .env*.local
@@ -35,20 +26,6 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 .vercel
-
-# Google Play / Billing
-google-play-service-account.json
-# google-services.json - COMENTADO PARA PERMITIR BUILD
-GoogleService-Info.plist
-*.keystore
-release.keystore
-keystore.properties
-android/keystore.properties
-
-# Sensitive files
-*.env
-.env.local
-.env.production
 
 # Android Emulator
 .android/
@@ -96,11 +73,6 @@ ntuser.*
 ../../../.kiro/
 ../../../AndroidStudioProjects/
 
-# Builds
-*.aab
-*.apk
-dist-test/
-
 # IDE
 .idea/
 
@@ -111,10 +83,3 @@ dist-test/
 # Dados sensíveis / Temporários
 Facebook/
 teste/
-lacnutry-release.keystore
-android/app/google-services.json
-
-# Lock files (manter apenas um)
-package-lock.json
-bun.lock
-credentials.json

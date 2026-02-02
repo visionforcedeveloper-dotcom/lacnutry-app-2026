@@ -96,12 +96,22 @@ export default function HomeScreen() {
       route: "/(tabs)/scanner",
     },
     {
-      id: "reactions",
-      title: "Alertas de Reação",
-      description: "Registre reações e identifique padrões",
+      id: "emergency",
+      title: "Passei Mal Agora",
+      description: "Orientações de emergência para reações à lactose",
       icon: AlertCircle,
       color: "#E74C3C",
       bgColor: "#FFE5E5",
+      route: "/modo-emergencia",
+      isEmergency: true,
+    },
+    {
+      id: "reactions",
+      title: "Alertas de Reação",
+      description: "Registre reações e identifique padrões",
+      icon: Activity,
+      color: "#9B59B6",
+      bgColor: "#F3E5F5",
       route: "/(tabs)/receitas",
       isPremium: true,
     },
@@ -210,7 +220,9 @@ export default function HomeScreen() {
                   <View style={[styles.featureIconContainer, { backgroundColor: feature.bgColor }]}>
                     <Icon color={feature.color} size={28} />
                   </View>
-                  <Text style={styles.featureTitle}>{feature.title}</Text>
+                  <Text style={styles.featureTitle}>
+                    {feature.title}
+                  </Text>
                   <Text style={styles.featureDescription}>{feature.description}</Text>
                 </TouchableOpacity>
               );

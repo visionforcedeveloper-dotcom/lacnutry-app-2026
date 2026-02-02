@@ -3,7 +3,8 @@
     "name": "LacNutry App",
     "slug": "lacnutry-app",
     "scheme": "lacnutry-app",
-    "version": "3.71.0",
+    "owner": "visionforce7",
+    "version": "4.6.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": {
@@ -12,7 +13,7 @@
     },
     "android": {
       "package": "com.lacnutry.app",
-      "versionCode": 183,
+      "versionCode": 184,
       "permissions": [
         "com.android.vending.BILLING"
       ]
@@ -30,7 +31,9 @@
     ],
     "extra": {
       "eas": {
-      }
+        "projectId": "9821d3f3-b5b7-4fe3-b382-0bd27d9efbc7"
+      },
+      "router": {}
     }
   }
 }

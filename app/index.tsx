@@ -1,81 +1,66 @@
 import React, { useEffect } from "react";
-import { useProfile } from "@/contexts/ProfileContext";
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
-import LoadingScreen from "@/components/LoadingScreen";
+import Colors from "@/constants/Colors";
+import { useProfile } from "@/contexts/ProfileContext";
 
 export default function IndexScreen() {
+  console.log('[IndexScreen] Renderizando tela de entrada...');
+  
   const profileContext = useProfile();
 
-  console.log('[IndexScreen] Renderizando tela de entrada...');
-
-  // Verificar se o contexto está carregado
-  if (!profileContext) {
-    console.log('[IndexScreen] Contexto não disponível');
-    return <LoadingScreen message="Inicializando aplicativo..." />;
-  }
-
-  const { 
-    isLoading, 
-    isFirstAccess, 
-    hasCompletedQuiz, 
-    hasSubscription,
-    quizProgress 
-  } = profileContext;
-
-  // Mostrar loading enquanto carrega dados
-  if (isLoading) {
-    console.log('[IndexScreen] Ainda carregando dados...');
-    return <LoadingScreen message="Carregando seus dados..." />;
-  }
-
-  // Lógica de roteamento baseada no estado do usuário
   useEffect(() => {
-    console.log('[IndexScreen] Determinando fluxo do usuário...');
-    console.log('[IndexScreen] isFirstAccess:', isFirstAccess);
-    console.log('[IndexScreen] hasCompletedQuiz:', hasCompletedQuiz);
-    console.log('[IndexScreen] hasSubscription:', hasSubscription);
-    console.log('[IndexScreen] quizProgress:', quizProgress);
-
-    const determineRoute = () => {
-      // Se é o primeiro acesso e não tem progresso do quiz, vai para welcome
-      if (isFirstAccess && !quizProgress) {
-        console.log('[IndexScreen] → Redirecionando para welcome (primeiro acesso)');
-        router.replace('/welcome');
-        return;
+    console.log('[IndexScreen] → Forçando fluxo de onboarding');
+    
+    // Limpar dados salvos para forçar o fluxo completo
+    const resetAndRedirect = async () => {
+      if (profileContext?.resetAllData) {
+        console.log('[IndexScreen] → Resetando dados do usuário');
+        await profileContext.resetAllData();
       }
-
-      // Se tem progresso do quiz mas não completou, continua o quiz
-      if (quizProgress && !hasCompletedQuiz) {
-        console.log('[IndexScreen] → Redirecionando para quiz (continuar)');
-        router.replace('/quiz');
-        return;
-      }
-
-      // Se completou o quiz mas não tem assinatura, vai para testimonials → paywall
-      if (hasCompletedQuiz && !hasSubscription) {
-        console.log('[IndexScreen] → Redirecionando para testimonials');
-        router.replace('/testimonials');
-        return;
-      }
-
-      // Se tem assinatura, vai direto para o app
-      if (hasSubscription) {
-        console.log('[IndexScreen] → Redirecionando para app principal');
-        router.replace('/(tabs)');
-        return;
-      }
-
-      // Fallback: se não se encaixa em nenhum caso, vai para welcome
-      console.log('[IndexScreen] → Fallback: redirecionando para welcome');
+      
+      console.log('[IndexScreen] → Redirecionando para welcome');
+      // Redirecionar para welcome
       router.replace('/welcome');
     };
-
-    // Pequeno delay para garantir que o contexto está totalmente carregado
-    const timer = setTimeout(determineRoute, 100);
+    
+    // Executar sempre, mesmo se o contexto não estiver carregado
+    const timer = setTimeout(() => {
+      resetAndRedirect();
+    }, 100); // Pequeno delay para garantir que o contexto seja carregado
     
     return () => clearTimeout(timer);
-  }, [isFirstAccess, hasCompletedQuiz, hasSubscription, quizProgress]);
+  }, [profileContext]);
 
-  // Mostrar loading enquanto determina a rota
-  return <LoadingScreen message="Preparando sua experiência..." />;
+  return (
+    <View style={styles.container}>
+      <Text style={styles.logo}>LacNutry</Text>
+      <ActivityIndicator size="large" color={Colors.primary} style={styles.spinner} />
+      <Text style={styles.message}>Iniciando fluxo de onboarding...</Text>
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    paddingHorizontal: 20,
+  },
+  logo: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: Colors.primary,
+    marginBottom: 30,
+  },
+  spinner: {
+    marginBottom: 20,
+  },
+  message: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+});
