@@ -10,24 +10,52 @@ export default function IndexScreen() {
   const profileContext = useProfile();
 
   useEffect(() => {
-    console.log('[IndexScreen] → Forçando fluxo de onboarding');
+    if (!profileContext || profileContext.isLoading) {
+      console.log('[IndexScreen] → Aguardando contexto carregar...');
+      return;
+    }
+
+    const { userProgress, hasCompletedQuiz, hasSubscription, updateUserProgress } = profileContext;
     
-    // Limpar dados salvos para forçar o fluxo completo
-    const resetAndRedirect = async () => {
-      if (profileContext?.resetAllData) {
-        console.log('[IndexScreen] → Resetando dados do usuário');
-        await profileContext.resetAllData();
+    console.log('[IndexScreen] → Estado atual:', {
+      stage: userProgress?.stage,
+      hasCompletedQuiz,
+      hasSubscription,
+    });
+
+    const redirectUser = async () => {
+      // Se já tem assinatura, vai direto para o app
+      if (hasSubscription) {
+        console.log('[IndexScreen] → Usuário premium, indo para app');
+        router.replace("/(tabs)");
+        return;
       }
-      
-      console.log('[IndexScreen] → Redirecionando para welcome');
-      // Redirecionar para welcome
-      router.replace('/welcome');
+
+      // Baseado no progresso salvo, redirecionar para a tela correta
+      switch (userProgress?.stage) {
+        case 'quiz':
+          console.log('[IndexScreen] → Retomando quiz');
+          router.replace('/quiz');
+          break;
+        case 'paywall':
+          console.log('[IndexScreen] → Retomando paywall');
+          router.replace('/paywall');
+          break;
+        case 'completed':
+          console.log('[IndexScreen] → Onboarding completo, indo para app');
+          router.replace("/(tabs)");
+          break;
+        default:
+          console.log('[IndexScreen] → Iniciando do welcome');
+          await updateUserProgress('welcome');
+          router.replace('/welcome');
+          break;
+      }
     };
     
-    // Executar sempre, mesmo se o contexto não estiver carregado
     const timer = setTimeout(() => {
-      resetAndRedirect();
-    }, 100); // Pequeno delay para garantir que o contexto seja carregado
+      redirectUser();
+    }, 100);
     
     return () => clearTimeout(timer);
   }, [profileContext]);
@@ -36,7 +64,7 @@ export default function IndexScreen() {
     <View style={styles.container}>
       <Text style={styles.logo}>LacNutry</Text>
       <ActivityIndicator size="large" color={Colors.primary} style={styles.spinner} />
-      <Text style={styles.message}>Iniciando fluxo de onboarding...</Text>
+      <Text style={styles.message}>Carregando...</Text>
     </View>
   );
 }

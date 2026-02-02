@@ -70,6 +70,7 @@ const STORAGE_KEYS = {
   QUIZ_COMPLETED: '@lacnutry_quiz_completed',
   QUIZ_PROGRESS: '@lacnutry_quiz_progress',
   SUBSCRIPTION: '@lacnutry_subscription',
+  USER_PROGRESS: '@lacnutry_user_progress',
 };
 
 export interface QuizProgress {
@@ -77,6 +78,13 @@ export interface QuizProgress {
   answers: Record<string, number>;
   userName?: string;
   userEmail?: string;
+}
+
+export type UserProgressStage = 'welcome' | 'quiz' | 'paywall' | 'completed';
+
+export interface UserProgress {
+  stage: UserProgressStage;
+  completedAt?: string;
 }
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -97,6 +105,7 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
   const [hasSubscription, setHasSubscription] = useState(false);
   const [quizProgress, setQuizProgress] = useState<QuizProgress | null>(null);
   const [isPremium, setIsPremium] = useState(false);
+  const [userProgress, setUserProgress] = useState<UserProgress>({ stage: 'welcome' });
   const [stats, setStats] = useState<StatsData>({
     totalScans: 0,
     streakDays: 0,
@@ -140,6 +149,7 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
         quizProgressData,
         subscriptionData,
         statsData,
+        userProgressData,
       ] = await Promise.all([
         Storage.getItem(STORAGE_KEYS.PROFILE),
         Storage.getItem(STORAGE_KEYS.FAVORITES),
@@ -150,6 +160,7 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
         Storage.getItem(STORAGE_KEYS.QUIZ_PROGRESS),
         Storage.getItem(STORAGE_KEYS.SUBSCRIPTION),
         Storage.getItem(STORAGE_KEYS.STATS),
+        Storage.getItem(STORAGE_KEYS.USER_PROGRESS),
       ]);
 
       console.log('[ProfileContext] 📊 Processando dados carregados...');
@@ -168,6 +179,9 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
       }
       if (quizProgressData) {
         setQuizProgress(JSON.parse(quizProgressData));
+      }
+      if (userProgressData) {
+        setUserProgress(JSON.parse(userProgressData));
       }
 
       setIsFirstAccess(firstAccessData === null);
@@ -416,6 +430,7 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
         Storage.removeItem(STORAGE_KEYS.QUIZ_COMPLETED),
         Storage.removeItem(STORAGE_KEYS.QUIZ_PROGRESS),
         Storage.removeItem(STORAGE_KEYS.SUBSCRIPTION),
+        Storage.removeItem(STORAGE_KEYS.USER_PROGRESS),
       ]);
       
       // Resetar estados
@@ -424,10 +439,27 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
       setHasSubscription(false);
       setIsPremium(false);
       setQuizProgress(null);
+      setUserProgress({ stage: 'welcome' });
       
       console.log('[ProfileContext] ✅ Dados resetados com sucesso');
     } catch (error) {
       console.error('[ProfileContext] ❌ Erro ao resetar dados:', error);
+    }
+  }, []);
+
+  const updateUserProgress = useCallback(async (stage: UserProgressStage) => {
+    try {
+      const progress: UserProgress = {
+        stage,
+        completedAt: new Date().toISOString(),
+      };
+      
+      await Storage.setItem(STORAGE_KEYS.USER_PROGRESS, JSON.stringify(progress));
+      setUserProgress(progress);
+      
+      console.log('[ProfileContext] 📍 Progresso atualizado:', stage);
+    } catch (error) {
+      console.error('[ProfileContext] ❌ Erro ao salvar progresso:', error);
     }
   }, []);
 
@@ -441,6 +473,7 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
     hasCompletedQuiz,
     hasSubscription,
     quizProgress,
+    userProgress,
     stats,
     updateProfile,
     toggleFavorite,
@@ -458,6 +491,7 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
     completeSubscription,
     cancelSubscription,
     resetAllData,
+    updateUserProgress,
   }), [
     profile,
     favorites,
@@ -468,6 +502,7 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
     hasCompletedQuiz,
     hasSubscription,
     quizProgress,
+    userProgress,
     stats,
     updateProfile,
     toggleFavorite,
@@ -484,5 +519,6 @@ export const [ProfileProvider, useProfile] = createContextHook(() => {
     completeSubscription,
     cancelSubscription,
     resetAllData,
+    updateUserProgress,
   ]);
 });

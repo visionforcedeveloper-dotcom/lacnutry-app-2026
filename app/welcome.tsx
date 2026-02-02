@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowRight } from "lucide-react-native";
 import { router } from "expo-router";
 import Colors from "@/constants/Colors";
+import { useProfile } from "@/contexts/ProfileContext";
 
 const { width } = Dimensions.get("window");
 
@@ -30,10 +31,12 @@ const imageSources = [
 
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
+  const { updateUserProgress } = useProfile();
   const [activeIndex, setActiveIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  const handleStartQuiz = () => {
+  const handleStartQuiz = async () => {
+    await updateUserProgress('quiz');
     router.replace("/quiz");
   };
 

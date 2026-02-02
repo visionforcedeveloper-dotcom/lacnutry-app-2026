@@ -71,7 +71,7 @@ const pricingPlans: PricingPlan[] = [
 
 export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
-  const { completeSubscription, hasSubscription, isPremium, setPremiumStatus, completeOnboarding } = useProfile();
+  const { completeSubscription, hasSubscription, isPremium, setPremiumStatus, completeOnboarding, updateUserProgress } = useProfile();
   
   // Hook do RevenueCat
   const {
@@ -164,6 +164,7 @@ export default function PaywallScreen() {
         
         // Atualizar contexto
         await completeSubscription();
+        await updateUserProgress('completed');
         
         Alert.alert(
           'Sucesso!',
@@ -187,6 +188,8 @@ export default function PaywallScreen() {
       
       if (err.code === 'PURCHASE_CANCELLED') {
         console.log('[Paywall] Usuário cancelou a compra');
+        // Não mostrar erro quando usuário cancela
+        return;
       } else {
         Alert.alert(
           'Erro na compra', 
@@ -215,8 +218,9 @@ export default function PaywallScreen() {
           [
             {
               text: 'OK',
-              onPress: () => {
-                // Completar onboarding e ir para o app
+              onPress: async () => {
+                // Atualizar progresso e completar onboarding
+                await updateUserProgress('completed');
                 completeOnboarding().then(() => {
                   router.replace("/(tabs)");
                 });
@@ -354,47 +358,25 @@ export default function PaywallScreen() {
         
         {/* Benefits List */}
         <View style={styles.benefitsContainer}>
-          <View style={styles.benefitRow}>
-            <View style={styles.trialBadge}>
-              <Sparkles color={Colors.white} size={18} />
-              <Text style={styles.trialBadgeText}>APROVEITE 3 DIAS GRÁTIS</Text>
-            </View>
-          </View>
-          
           <View style={styles.benefitsList}>
             <View style={styles.benefitItem}>
               <Check color={Colors.primary} size={22} />
-              <Text style={styles.benefitText}>Mais de 120 receitas personalizadas</Text>
+              <Text style={styles.benefitText}>Scanner inteligente</Text>
             </View>
 
             <View style={styles.benefitItem}>
               <Check color={Colors.primary} size={22} />
-              <Text style={styles.benefitText}>Novas receitas toda semana</Text>
+              <Text style={styles.benefitText}>Registro de reações</Text>
             </View>
 
             <View style={styles.benefitItem}>
               <Check color={Colors.primary} size={22} />
-              <Text style={styles.benefitText}>Scanner de produtos</Text>
-            </View>
-
-            <View style={styles.benefitItem}>
-              <Check color={Colors.primary} size={22} />
-              <Text style={styles.benefitText}>Nutricionista IA</Text>
-            </View>
-
-            <View style={styles.benefitItem}>
-              <Check color={Colors.primary} size={22} />
-              <Text style={styles.benefitText}>Gerador de receitas personalizadas</Text>
+              <Text style={styles.benefitText}>Botão de emergência</Text>
             </View>
 
             <View style={styles.benefitItem}>
               <Check color={Colors.primary} size={22} />
               <Text style={styles.benefitText}>Sem anúncios</Text>
-            </View>
-
-            <View style={styles.benefitItem}>
-              <Check color={Colors.primary} size={22} />
-              <Text style={styles.benefitText}>Suporte prioritário</Text>
             </View>
           </View>
         </View>
@@ -474,7 +456,7 @@ export default function PaywallScreen() {
 
         {/* FAQ Interativo - Perguntas Frequentes */}
         <View style={styles.faqContainer}>
-          <Text style={styles.faqTitle}>❓ Perguntas Frequentes</Text>
+          <Text style={styles.faqTitle}>Perguntas Frequentes</Text>
           <Text style={styles.faqSubtitle}>Toque para saber mais</Text>
           
           {faqData.map((faq) => {
@@ -516,15 +498,6 @@ export default function PaywallScreen() {
             <Text style={styles.restoreButton}>Restaurar Compras</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity onPress={() => {
-            // Completar onboarding mesmo pulando e ir para o app
-            completeOnboarding().then(() => {
-              router.replace("/(tabs)");
-            });
-          }}>
-            <Text style={styles.skipButton}>Pular por enquanto</Text>
-          </TouchableOpacity>
-          
           <Text style={styles.disclaimer}>
             Cobrança recorrente. Cancele a qualquer momento.
           </Text>
@@ -562,25 +535,6 @@ const styles = StyleSheet.create({
   benefitsContainer: {
     marginHorizontal: 20,
     marginBottom: 30,
-  },
-  benefitRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  trialBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.secondary,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 8,
-  },
-  trialBadgeText: {
-    color: Colors.white,
-    fontWeight: 'bold',
-    fontSize: 14,
   },
   benefitsList: {
     gap: 15,
@@ -782,12 +736,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.primary,
     fontWeight: '600',
-    textDecorationLine: 'underline',
-  },
-  skipButton: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    fontWeight: '500',
     textDecorationLine: 'underline',
   },
   disclaimer: {

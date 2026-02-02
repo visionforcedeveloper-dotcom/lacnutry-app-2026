@@ -44,61 +44,51 @@ const quizQuestions: QuizQuestion[] = [
     id: 1,
     question: "Você costuma sentir desconforto após consumir leite?",
     options: ["Sim, sempre", "Às vezes", "Raramente", "Nunca"],
-    explanation: "Compreender seus sintomas é o primeiro passo para uma vida mais saudável!",
   },
   {
     id: 2,
     question: "Qual destes sintomas você sente mais?",
     options: ["Gases e inchaço", "Dor abdominal", "Náusea", "Diarreia"],
-    explanation: "Identificar seus sintomas nos ajuda a personalizar suas receitas.",
   },
   {
     id: 3,
     question: "Há quanto tempo você tem sintomas de intolerância?",
     options: ["Menos de 6 meses", "6 meses a 1 ano", "1 a 3 anos", "Mais de 3 anos"],
-    explanation: "Conhecer seu histórico nos ajuda a entender melhor suas necessidades.",
   },
   {
     id: 4,
     question: "Você já evitou eventos sociais por medo de consumir lactose?",
     options: ["Sim, várias vezes", "Algumas vezes", "Raramente", "Nunca"],
-    explanation: "Com as receitas certas, você pode aproveitar qualquer evento sem preocupações.",
   },
   {
     id: 6,
     question: "Quanto tempo após consumir lactose os sintomas aparecem?",
     options: ["30 minutos a 2 horas", "Imediatamente", "Após 6 horas", "No dia seguinte"],
-    explanation: "Essas informações são importantes para personalizar suas recomendações.",
   },
   {
     id: 7,
     question: "Você se sente limitado(a) nas escolhas alimentares?",
     options: ["Sim, muito", "Um pouco", "Raramente", "Não"],
-    explanation: "Não se preocupe! Existem milhares de receitas deliciosas sem lactose esperando por você.",
   },
   {
     id: 10,
     question: "Você está preparado(a) para mudar de vida com as ferramentas inteligentes do LacNutry?",
     options: ["Sim, estou pronto(a)!", "Quero conhecer as ferramentas", "Tenho curiosidade", "Vamos lá!"],
-    explanation: "Incrível! Com o Scanner de produtos, Nutricionista IA e Gerador de receitas, você terá tudo para uma vida sem lactose e cheia de sabor! 🚀",
   },
   {
     id: 11,
     question: "Qual é seu nível de experiência com alimentação sem lactose?",
     options: ["Iniciante - acabei de descobrir", "Intermediário - alguns meses", "Avançado - mais de 1 ano", "Expert - vivo sem lactose há anos"],
-    explanation: "Vamos personalizar o conteúdo de acordo com sua experiência.",
   },
   {
     id: 12,
     question: "Você lê os rótulos dos alimentos antes de comprar?",
     options: ["Sempre", "Frequentemente", "Às vezes", "Nunca"],
-    explanation: "Vamos te ensinar a identificar lactose escondida em produtos inesperados.",
   },
   {
     id: 13,
     question: "Quais substitutos você gostaria de aprender a usar?",
     options: ["Leites vegetais", "Queijos sem lactose", "Manteigas e cremes", "Todos"],
-    explanation: "Perfeito! Temos receitas incríveis com todos esses substitutos.",
   },
   {
     id: 14,
@@ -379,6 +369,11 @@ export default function QuizScreen() {
     // Completar quiz e limpar progresso imediatamente
     await completeQuiz(userName, email);
     await clearQuizProgress();
+    
+    // Atualizar progresso para paywall
+    const { updateUserProgress } = useProfile();
+    await updateUserProgress('paywall');
+    
     setQuizCompleted(true);
 
     // Animar a barra de progresso e mensagens
@@ -403,7 +398,7 @@ export default function QuizScreen() {
       if (progress >= 100) {
         clearInterval(interval);
         setTimeout(() => {
-          router.replace("/testimonials");
+          router.replace("/paywall");
         }, 500);
       }
     }, 50); // Total: 5 segundos (100 * 50ms)
@@ -532,12 +527,12 @@ export default function QuizScreen() {
             {motivational.type === 'mockup-recipes' && (
               <>
                 <Text style={styles.motivationalQuestion}>
-                  Quer descobrir os detalhes nutricionais de cada produto antes de comprar?
+                  Tenha acesso às informações nutricionais de produtos que contém lactose
                 </Text>
                 
                 <View style={styles.scanImageContainer}>
                   <Image 
-                    source={require('@/assets/images/2.png')}
+                    source={require('@/assets/img-10.png')}
                     style={styles.scanImage}
                     resizeMode="contain"
                   />
