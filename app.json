@@ -3,7 +3,7 @@
     "name": "LacNutry App",
     "slug": "lacnutry-app",
     "scheme": "lacnutry-app",
-    "version": "4.4.0",
+    "version": "3.71.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": {
@@ -30,7 +30,6 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "9bb3a470-4fbd-42f6-b293-53ee36e47ae4"
       }
     }
   }
