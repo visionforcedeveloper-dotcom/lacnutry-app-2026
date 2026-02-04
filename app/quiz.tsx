@@ -369,11 +369,6 @@ export default function QuizScreen() {
     // Completar quiz e limpar progresso imediatamente
     await completeQuiz(userName, email);
     await clearQuizProgress();
-    
-    // Atualizar progresso para paywall
-    const { updateUserProgress } = useProfile();
-    await updateUserProgress('paywall');
-    
     setQuizCompleted(true);
 
     // Animar a barra de progresso e mensagens
@@ -398,7 +393,7 @@ export default function QuizScreen() {
       if (progress >= 100) {
         clearInterval(interval);
         setTimeout(() => {
-          router.replace("/paywall");
+          router.replace("/testimonials");
         }, 500);
       }
     }, 50); // Total: 5 segundos (100 * 50ms)

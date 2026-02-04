@@ -31,6 +31,13 @@ export default function IndexScreen() {
         return;
       }
 
+      // Se completou o quiz mas não tem assinatura, vai para testimonials
+      if (hasCompletedQuiz && !hasSubscription) {
+        console.log('[IndexScreen] → Quiz completo, indo para testimonials');
+        router.replace('/testimonials');
+        return;
+      }
+
       // Baseado no progresso salvo, redirecionar para a tela correta
       switch (userProgress?.stage) {
         case 'quiz':

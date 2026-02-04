@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Star, TrendingUp, Heart, ChevronLeft } from "lucide-react-native";
 import { router } from "expo-router";
 import Colors from "@/constants/Colors";
+import { useProfile } from "@/contexts/ProfileContext";
 
 interface Testimonial {
   id: number;
@@ -58,9 +59,11 @@ const testimonials: Testimonial[] = [
 
 export default function TestimonialsScreen() {
   const insets = useSafeAreaInsets();
+  const { updateUserProgress } = useProfile();
   const [currentTestimonial] = useState(0);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    await updateUserProgress('paywall');
     router.replace("/paywall");
   };
 

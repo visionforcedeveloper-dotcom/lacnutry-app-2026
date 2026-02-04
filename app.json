@@ -4,7 +4,7 @@
     "slug": "lacnutry-app",
     "scheme": "lacnutry-app",
     "owner": "visionforce7",
-    "version": "4.0.2",
+    "version": "4.0.3",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": {
@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.lacnutry.app",
-      "versionCode": 167,
+      "versionCode": 168,
       "permissions": [
         "com.android.vending.BILLING"
       ]
