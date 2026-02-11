@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LacNutry - Excluir Conta</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo h1 {
+            color: #667eea;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        .content h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        .content p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .warning p {
+            color: #856404;
+            margin: 0;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #c82333;
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .success p {
+            color: #155724;
+            margin: 0;
+        }
+        
+        .steps {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .steps h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .steps ol {
+            padding-left: 20px;
+        }
+        
+        .steps li {
+            color: #666;
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>🥛 LacNutry</h1>
+        </div>
+        
+        <div class="content">
+            <h2>Excluir Conta</h2>
+            
+            <p>Sentimos muito em vê-lo partir. Se você deseja excluir sua conta do LacNutry, siga as instruções abaixo.</p>
+            
+            <div class="warning">
+                <p><strong>⚠️ Atenção:</strong> Esta ação é irreversível. Todos os seus dados, incluindo histórico de reações, receitas favoritas e configurações serão permanentemente excluídos.</p>
+            </div>
+            
+            <div class="steps">
+                <h3>Como excluir sua conta:</h3>
+                <ol>
+                    <li>Abra o aplicativo LacNutry</li>
+                    <li>Vá para "Configurações" (ícone de engrenagem)</li>
+                    <li>Role até o final da página</li>
+                    <li>Toque em "Excluir Conta"</li>
+                    <li>Confirme a exclusão</li>
+                </ol>
+            </div>
+            
+            <p><strong>Ou envie um email para:</strong></p>
+            <p style="text-align: center; font-size: 18px; color: #667eea; font-weight: bold;">
+                suporte@lacnutry.com
+            </p>
+            
+            <div class="form-group">
+                <label for="email">Email da conta:</label>
+                <input type="email" id="email" placeholder="seu@email.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="reason">Motivo (opcional):</label>
+                <input type="text" id="reason" placeholder="Por que você está saindo?">
+            </div>
+            
+            <button class="btn" onclick="submitRequest()">Solicitar Exclusão da Conta</button>
+            
+            <div class="success" id="successMessage">
+                <p><strong>✓ Solicitação enviada!</strong> Sua conta será excluída em até 48 horas. Você receberá uma confirmação por email.</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function submitRequest() {
+            const email = document.getElementById('email').value;
+            const reason = document.getElementById('reason').value;
+            
+            if (!email) {
+                alert('Por favor, insira seu email.');
+                return;
+            }
+            
+            // Aqui você pode adicionar integração com seu backend
+            // Por enquanto, apenas mostra mensagem de sucesso
+            
+            document.getElementById('successMessage').style.display = 'block';
+            document.querySelector('.btn').disabled = true;
+            document.querySelector('.btn').textContent = 'Solicitação Enviada';
+            
+            // Simular envio de email (você pode integrar com um serviço real)
+            console.log('Solicitação de exclusão:', { email, reason });
+        }
+    </script>
+</body>
+</html>
